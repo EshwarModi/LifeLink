@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}Donor Dashboard - LifeLink{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 2rem;
+    }
+
+    .sidebar {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        height: fit-content;
+    }
+
+    .profile-section {
+        border-bottom: 2px solid #eee;
+        padding-bottom: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-section h3 {
+        color: #dc3545;
+        margin-bottom: 1rem;
+    }
+
+    .profile-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .profile-info strong {
+        color: #666;
+    }
+
+    .blood-badge {
+        background-color: #dc3545;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: bold;
+        display: inline-block;
+        font-size: 1.2rem;
+        text-align: center;
+    }
+
+    .main-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .main-content h2 {
+        color: #dc3545;
+        margin-bottom: 1.5rem;
+    }
+
+    .requests-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .request-card {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #dc3545;
+    }
+
+    .request-card h4 {
+        color: #dc3545;
+        margin-bottom: 0.5rem;
+    }
+
+    .request-info {
+        font-size: 0.9rem;
+        color: #666;
+        line-height: 1.8;
+    }
+
+    .request-info strong {
+        color: #333;
+    }
+
+    .urgency-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        margin-top: 0.5rem;
+    }
+
+    .urgency-urgent {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .urgency-normal {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .contact-btn {
+        margin-top: 1rem;
+        width: 100%;
+    }
+
+    .empty-state {
+        text-align: center;
+        color: #666;
+        padding: 2rem;
+    }
+
+    .empty-state p {
+        margin-bottom: 1rem;
+    }
+
+    .tab-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        border-bottom: 2px solid #eee;
+    }
+
+    .tab-button {
+        padding: 0.75rem 1.5rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        border-bottom: 3px solid transparent;
+        color: #666;
+        transition: all 0.3s;
+    }
+
+    .tab-button.active {
+        color: #dc3545;
+        border-bottom-color: #dc3545;
+    }
+
+    .tab-content {
+        display: none;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="sidebar">
+        <div class="profile-section">
+            <h3>Profile</h3>
+            <div class="profile-info">
+                <div><strong>Name:</strong> {{ user.full_name }}</div>
+                <div><strong>City:</strong> {{ user.city }}, {{ user.state }}</div>
+                <div><strong>Phone:</strong> {{ user.phone }}</div>
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <div class="blood-badge">{{ donor_profile.blood_group }}</div>
+            <div class="profile-info" style="margin-top: 1rem;">
+                <div><strong>Age:</strong> {{ donor_profile.age }}</div>
+                <div><strong>Gender:</strong> {{ donor_profile.gender }}</div>
+                <div>
+                    <strong>Status:</strong>
+                    {% if donor_profile.available_to_donate %}
+                    <span style="color: green; font-weight: bold;">Available</span>
+                    {% else %}
+                    <span style="color: red; font-weight: bold;">Not Available</span>
+                    {% endif %}
+                </div>
+                {% if donor_profile.last_donation_date %}
+                <div><strong>Last Donation:</strong> {{ donor_profile.last_donation_date.strftime('%d-%m-%Y') }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <button class="btn btn-secondary" style="width: 100%;" onclick="alert('Edit profile feature coming soon!')">Edit Profile</button>
+    </div>
+
+    <div class="main-content">
+        <h2>Available Requests</h2>
+
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="switchTab('urgent-requests')">🚨 Urgent</button>
+            <button class="tab-button" onclick="switchTab('normal-requests')">📋 Normal</button>
+            <button class="tab-button" onclick="switchTab('my-matches')">✅ My Matches</button>
+        </div>
+
+        <div id="urgent-requests" class="tab-content active">
+            <div class="requests-grid" id="urgentRequestsContainer">
+                <div class="empty-state">
+                    <p>No urgent requests at the moment</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="normal-requests" class="tab-content">
+            <div class="requests-grid" id="normalRequestsContainer">
+                <div class="empty-state">
+                    <p>No normal requests at the moment</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="my-matches" class="tab-content">
+            <div class="requests-grid" id="matchesContainer">
+                {% if matches %}
+                    {% for match in matches %}
+                    <div class="request-card">
+                        <h4>{{ match.request.user.full_name }}</h4>
+                        <div class="request-info">
+                            <div><strong>Blood Type Needed:</strong> {{ match.request.blood_group }}</div>
+                            <div><strong>Units:</strong> {{ match.request.units_needed }}</div>
+                            <div><strong>Hospital:</strong> {{ match.request.hospital_name }}</div>
+                            <div><strong>Required By:</strong> {{ match.request.required_by.strftime('%d-%m-%Y %H:%M') }}</div>
+                            <div>
+                                {% if match.contact_shared %}
+                                <strong>Contact:</strong> {{ match.request.user.phone }}
+                                {% else %}
+                                <button class="btn btn-success contact-btn" onclick="shareContact({{ match.id }})">Share Contact</button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="empty-state">
+                    <p>No matches yet. Check urgent and normal requests to help someone!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(tabName) {
+        // Hide all tabs
+        const tabs = document.querySelectorAll('.tab-content');
+        tabs.forEach(tab => tab.classList.remove('active'));
+        
+        // Remove active class from all buttons
+        const buttons = document.querySelectorAll('.tab-button');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        
+        // Show selected tab
+        document.getElementById(tabName).classList.add('active');
+        
+        // Add active class to clicked button
+        event.target.classList.add('active');
+
+        // Load requests if needed
+        if (tabName === 'urgent-requests' || tabName === 'normal-requests') {
+            loadRequests(tabName === 'urgent-requests' ? 'urgent' : 'normal');
+        }
+    }
+
+    async function loadRequests(urgency) {
+        try {
+            const response = await fetch('{{ url_for("find_requests") }}');
+            const requests = await response.json();
+            
+            const filtered = requests.filter(r => r.urgency === urgency);
+            const container = document.getElementById(urgency === 'urgent' ? 'urgentRequestsContainer' : 'normalRequestsContainer');
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No ' + urgency + ' requests at the moment</p></div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(request => `
+                <div class="request-card">
+                    <h4>${request.user.full_name}</h4>
+                    <div class="request-info">
+                        <div><strong>Blood Type:</strong> ${request.blood_group}</div>
+                        <div><strong>Units Needed:</strong> ${request.units_needed}</div>
+                        <div><strong>Hospital:</strong> ${request.hospital_name}</div>
+                        <div><strong>Location:</strong> ${request.user.city}</div>
+                        <div><strong>Required By:</strong> ${new Date(request.required_by).toLocaleString()}</div>
+                        <button class="btn btn-success contact-btn" onclick="respondToRequest(${request.id}, '${request.user.phone}')">I Can Help</button>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Error loading requests:', error);
+        }
+    }
+
+    function respondToRequest(requestId, phone) {
+        alert(`You have accepted to help!\n\nSeeker's Contact: ${phone}\n\nPlease coordinate donation details with them.`);
+    }
+
+    function shareContact(matchId) {
+        fetch(`{{ url_for("accept_match", match_id=0) }}`.replace('0', matchId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        }).then(response => {
+            if (response.ok) {
+                alert('Contact information shared successfully!');
+                location.reload();
+            }
+        });
+    }
+
+    // Load requests on page load
+    window.addEventListener('load', function() {
+        loadRequests('urgent');
+    });
+</script>
+{% endblock %}

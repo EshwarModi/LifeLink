@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block title %}Seeker Dashboard - LifeLink{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .dashboard-container {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 2rem;
+    }
+
+    .sidebar {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        height: fit-content;
+    }
+
+    .profile-section {
+        border-bottom: 2px solid #eee;
+        padding-bottom: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-section h3 {
+        color: #dc3545;
+        margin-bottom: 1rem;
+    }
+
+    .profile-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .profile-info strong {
+        color: #666;
+    }
+
+    .main-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .main-content h2 {
+        color: #dc3545;
+        margin-bottom: 1.5rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .requests-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .request-item {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border-left: 4px solid #dc3545;
+    }
+
+    .request-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+
+    .request-title {
+        color: #dc3545;
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
+
+    .status-open {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    .status-fulfilled {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .status-cancelled {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .urgency-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+
+    .urgency-urgent {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .urgency-normal {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+
+    .request-info {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        font-size: 0.95rem;
+        color: #666;
+        margin-bottom: 1rem;
+    }
+
+    .info-item strong {
+        color: #333;
+    }
+
+    .request-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        color: #666;
+        padding: 2rem;
+    }
+
+    .empty-state p {
+        margin-bottom: 1rem;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+    }
+
+    .modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal-content {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        max-width: 600px;
+        width: 90%;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .modal-header h2 {
+        margin: 0;
+        color: #dc3545;
+    }
+
+    .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #999;
+    }
+
+    .close-btn:hover {
+        color: #333;
+    }
+
+    .matched-donors {
+        background: #e8f5e9;
+        padding: 1rem;
+        border-radius: 4px;
+        margin-top: 1rem;
+    }
+
+    .matched-donors h4 {
+        color: #2e7d32;
+        margin-bottom: 0.5rem;
+    }
+
+    .donor-item {
+        background: white;
+        padding: 0.75rem;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+        border-left: 3px solid #4caf50;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="sidebar">
+        <div class="profile-section">
+            <h3>Profile</h3>
+            <div class="profile-info">
+                <div><strong>Name:</strong> {{ user.full_name }}</div>
+                <div><strong>City:</strong> {{ user.city }}, {{ user.state }}</div>
+                <div><strong>Phone:</strong> {{ user.phone }}</div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%;" onclick="openCreateRequestModal()">🆕 Create Request</button>
+    </div>
+
+    <div class="main-content">
+        <h2>Blood Requests</h2>
+
+        <div id="requestsList">
+            {% if requests %}
+                <div class="requests-list">
+                    {% for request in requests %}
+                    <div class="request-item">
+                        <div class="request-header">
+                            <h3 class="request-title">{{ request.blood_group }} Needed</h3>
+                            <span class="status-badge status-{{ request.status }}">{{ request.status.upper() }}</span>
+                        </div>
+
+                        <div style="margin-bottom: 0.5rem;">
+                            <span class="urgency-badge urgency-{{ request.urgency }}">{{ request.urgency.upper() }}</span>
+                        </div>
+
+                        <div class="request-info">
+                            <div class="info-item"><strong>Hospital:</strong> {{ request.hospital_name }}</div>
+                            <div class="info-item"><strong>Units Needed:</strong> {{ request.units_needed }}</div>
+                            <div class="info-item"><strong>Required By:</strong> {{ request.required_by.strftime('%d-%m-%Y %H:%M') }}</div>
+                            <div class="info-item"><strong>Reason:</strong> {{ request.reason[:40] }}...</div>
+                        </div>
+
+                        <p style="color: #666; font-size: 0.9rem; margin: 0.5rem 0;">
+                            <strong>Address:</strong> {{ request.hospital_address }}
+                        </p>
+
+                        {% if request.matches %}
+                        <div class="matched-donors">
+                            <h4>✅ {{ request.matches|length }} Donor(s) Matched</h4>
+                            {% for match in request.matches %}
+                            <div class="donor-item">
+                                <strong>{{ match.donor.full_name }}</strong> - {{ match.donor.city }}
+                                <br>
+                                <small>Contact: {{ match.donor.phone if match.contact_shared else '📞 Waiting to share' }}</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="request-actions">
+                            {% if request.status == 'open' %}
+                            <button class="btn btn-secondary" onclick="editRequest({{ request.id }})">Edit</button>
+                            <button class="btn btn-success" onclick="markAsFulfilled({{ request.id }})">Mark Fulfilled</button>
+                            <button class="btn btn-secondary" onclick="cancelRequest({{ request.id }})">Cancel</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+            <div class="empty-state">
+                <p>📋 You haven't created any blood requests yet</p>
+                <button class="btn btn-primary" onclick="openCreateRequestModal()">Create Your First Request</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Request Modal -->
+<div id="createRequestModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Create Blood Request</h2>
+            <button class="close-btn" onclick="closeCreateRequestModal()">×</button>
+        </div>
+
+        <form id="createRequestForm">
+            <div class="form-group">
+                <label for="blood_group">Blood Group Needed *</label>
+                <select id="blood_group" name="blood_group" required>
+                    <option value="">Select blood group</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="units_needed">Units Needed *</label>
+                <input type="number" id="units_needed" name="units_needed" min="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="urgency">Urgency Level *</label>
+                <select id="urgency" name="urgency" required>
+                    <option value="normal">Normal</option>
+                    <option value="urgent">Urgent</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="reason">Reason for Blood Transfusion *</label>
+                <textarea id="reason" name="reason" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="hospital_name">Hospital Name *</label>
+                <input type="text" id="hospital_name" name="hospital_name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="hospital_address">Hospital Address *</label>
+                <textarea id="hospital_address" name="hospital_address" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="required_by">Required By Date & Time *</label>
+                <input type="datetime-local" id="required_by" name="required_by" required>
+            </div>
+
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Create Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openCreateRequestModal() {
+        document.getElementById('createRequestModal').classList.add('active');
+    }
+
+    function closeCreateRequestModal() {
+        document.getElementById('createRequestModal').classList.remove('active');
+    }
+
+    document.getElementById('createRequestForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = {
+            blood_group: formData.get('blood_group'),
+            units_needed: formData.get('units_needed'),
+            urgency: formData.get('urgency'),
+            reason: formData.get('reason'),
+            hospital_name: formData.get('hospital_name'),
+            hospital_address: formData.get('hospital_address'),
+            required_by: formData.get('required_by')
+        };
+
+        try {
+            const response = await fetch('{{ url_for("create_request") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert('Blood request created successfully!');
+                closeCreateRequestModal();
+                location.reload();
+            } else {
+                alert(result.error || 'Error creating request');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        }
+    });
+
+    function markAsFulfilled(requestId) {
+        if (confirm('Mark this request as fulfilled?')) {
+            alert('Request marked as fulfilled! Thank you for finding donors.');
+            location.reload();
+        }
+    }
+
+    function cancelRequest(requestId) {
+        if (confirm('Are you sure you want to cancel this request?')) {
+            alert('Request cancelled.');
+            location.reload();
+        }
+    }
+
+    function editRequest(requestId) {
+        alert('Edit feature coming soon!');
+    }
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('createRequestModal');
+        if (event.target === modal) {
+            closeCreateRequestModal();
+        }
+    });
+</script>
+{% endblock %}

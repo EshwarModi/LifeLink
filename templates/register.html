@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Register - LifeLink{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .register-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .form-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+    }
+
+    .form-section h3 {
+        color: #dc3545;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid #dc3545;
+        padding-bottom: 0.5rem;
+    }
+
+    .donor-fields {
+        display: none;
+    }
+
+    .donor-fields.active {
+        display: block;
+    }
+
+    .two-column {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .two-column .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+
+    .text-center a {
+        color: #dc3545;
+        text-decoration: none;
+    }
+
+    .text-center a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-container">
+    <h1 style="text-align: center; margin-bottom: 2rem; color: #dc3545;">Join LifeLink</h1>
+
+    <form id="registerForm">
+        <div class="form-section">
+            <h3>Choose Your Role</h3>
+            <div class="two-column">
+                <div class="form-group">
+                    <label>
+                        <input type="radio" name="user_type" value="donor" checked> I want to donate blood
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="radio" name="user_type" value="seeker"> I need blood
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Personal Information</h3>
+            
+            <div class="form-group">
+                <label for="full_name">Full Name *</label>
+                <input type="text" id="full_name" name="full_name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="username">Username *</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email *</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password *</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number *</label>
+                <input type="tel" id="phone" name="phone" required>
+            </div>
+
+            <div class="two-column">
+                <div class="form-group">
+                    <label for="city">City *</label>
+                    <input type="text" id="city" name="city" required>
+                </div>
+                <div class="form-group">
+                    <label for="state">State *</label>
+                    <input type="text" id="state" name="state" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section donor-fields active" id="donorFields">
+            <h3>Donor Information</h3>
+
+            <div class="form-group">
+                <label for="blood_group">Blood Group *</label>
+                <select id="blood_group" name="blood_group">
+                    <option value="">Select your blood group</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                </select>
+            </div>
+
+            <div class="two-column">
+                <div class="form-group">
+                    <label for="age">Age *</label>
+                    <input type="number" id="age" name="age" min="18" max="65">
+                </div>
+                <div class="form-group">
+                    <label for="gender">Gender *</label>
+                    <select id="gender" name="gender">
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
+        </div>
+
+        <div class="text-center">
+            Already have an account? <a href="{{ url_for('login') }}">Login here</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    const registerForm = document.getElementById('registerForm');
+    const userTypeRadios = document.querySelectorAll('input[name="user_type"]');
+    const donorFields = document.getElementById('donorFields');
+    const bloodGroupInput = document.getElementById('blood_group');
+    const ageInput = document.getElementById('age');
+    const genderInput = document.getElementById('gender');
+
+    userTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.value === 'donor') {
+                donorFields.classList.add('active');
+                bloodGroupInput.required = true;
+                ageInput.required = true;
+                genderInput.required = true;
+            } else {
+                donorFields.classList.remove('active');
+                bloodGroupInput.required = false;
+                ageInput.required = false;
+                genderInput.required = false;
+            }
+        });
+    });
+
+    registerForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = {
+            username: formData.get('username'),
+            email: formData.get('email'),
+            password: formData.get('password'),
+            user_type: formData.get('user_type'),
+            full_name: formData.get('full_name'),
+            phone: formData.get('phone'),
+            city: formData.get('city'),
+            state: formData.get('state')
+        };
+
+        if (data.user_type === 'donor') {
+            data.blood_group = formData.get('blood_group');
+            data.age = formData.get('age');
+            data.gender = formData.get('gender');
+        }
+
+        try {
+            const response = await fetch('{{ url_for("register") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                window.location.href = result.redirect;
+            } else {
+                alert(result.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        }
+    });
+</script>
+{% endblock %}
