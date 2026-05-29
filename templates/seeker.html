@@ -413,17 +413,43 @@
         }
     });
 
-    function markAsFulfilled(requestId) {
-        if (confirm('Mark this request as fulfilled?')) {
-            alert('Request marked as fulfilled! Thank you for finding donors.');
-            location.reload();
+    async function markAsFulfilled(requestId) {
+        if (!confirm('Mark this request as fulfilled?')) return;
+        try {
+            const response = await fetch(`/seeker/update-request/${requestId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'fulfilled' })
+            });
+            const result = await response.json();
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert(result.error || 'Failed to update request');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
         }
     }
 
-    function cancelRequest(requestId) {
-        if (confirm('Are you sure you want to cancel this request?')) {
-            alert('Request cancelled.');
-            location.reload();
+    async function cancelRequest(requestId) {
+        if (!confirm('Are you sure you want to cancel this request?')) return;
+        try {
+            const response = await fetch(`/seeker/update-request/${requestId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'cancelled' })
+            });
+            const result = await response.json();
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert(result.error || 'Failed to cancel request');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
         }
     }
 

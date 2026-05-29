@@ -189,7 +189,13 @@
             </div>
         </div>
 
-        <button class="btn btn-secondary" style="width: 100%;" onclick="alert('Edit profile feature coming soon!')">Edit Profile</button>
+        <button class="btn btn-secondary" style="width: 100%;" onclick="toggleAvailability()">
+            {% if donor_profile and donor_profile.available_to_donate %}
+            🔴 Mark Unavailable
+            {% else %}
+            🟢 Mark Available
+            {% endif %}
+        </button>
     </div>
 
     <div class="main-content">
@@ -317,6 +323,27 @@
                 location.reload();
             }
         });
+    }
+
+    async function toggleAvailability() {
+        const currentlyAvailable = {{ 'true' if donor_profile and donor_profile.available_to_donate else 'false' }};
+        const newStatus = !currentlyAvailable;
+        try {
+            const response = await fetch('/api/donor/update-availability', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ available_to_donate: newStatus })
+            });
+            const result = await response.json();
+            if (response.ok) {
+                location.reload();
+            } else {
+                alert(result.error || 'Failed to update availability');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        }
     }
 
     // Load requests on page load

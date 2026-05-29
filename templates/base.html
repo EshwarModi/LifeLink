@@ -112,7 +112,7 @@
             border-radius: 4px;
         }
 
-        .alert-error {
+        .alert-error, .alert-danger {
             background-color: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
@@ -122,6 +122,18 @@
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
         }
 
         form {
@@ -184,17 +196,19 @@
     </header>
 
     <main class="container">
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
         {% block content %}{% endblock %}
     </main>
 
     <footer>
-        <p>&copy; 2024 LifeLink - Connecting Blood Donors and Seekers. All rights reserved.</p>
+        <p>&copy; 2025 LifeLink - Connecting Blood Donors and Seekers. All rights reserved.</p>
     </footer>
 
     {% block extra_scripts %}{% endblock %}
