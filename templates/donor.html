@@ -4,351 +4,533 @@
 
 {% block extra_styles %}
 <style>
+    /* ── Layout ── */
     .dashboard-container {
         display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 2rem;
+        grid-template-columns: 280px 1fr;
+        gap: 1.5rem;
+        align-items: start;
     }
 
+    /* ── Sidebar ── */
     .sidebar {
-        background: white;
-        padding: 2rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        height: fit-content;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 1.75rem;
+        border-radius: 16px;
+        position: sticky;
+        top: 1rem;
     }
 
     .profile-section {
-        border-bottom: 2px solid #eee;
-        padding-bottom: 1.5rem;
-        margin-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        padding-bottom: 1.25rem;
+        margin-bottom: 1.25rem;
     }
 
     .profile-section h3 {
-        color: #dc3545;
+        color: #ff6b7a;
         margin-bottom: 1rem;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 700;
     }
 
     .profile-info {
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.75);
     }
 
     .profile-info strong {
-        color: #666;
+        color: rgba(255,255,255,0.45);
+        font-weight: 500;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
     .blood-badge {
-        background-color: #dc3545;
+        background: linear-gradient(135deg, #dc3545, #ff4d6d);
         color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-weight: bold;
+        padding: 0.5rem 1.25rem;
+        border-radius: 100px;
+        font-weight: 800;
         display: inline-block;
-        font-size: 1.2rem;
-        text-align: center;
+        font-size: 1.3rem;
+        box-shadow: 0 4px 16px rgba(220,53,69,0.4);
     }
 
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.3rem 0.8rem;
+        border-radius: 100px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .status-available   { background: rgba(40,167,69,0.15); color: #4caf50; border: 1px solid rgba(40,167,69,0.3); }
+    .status-unavailable { background: rgba(220,53,69,0.15); color: #ff6b7a; border: 1px solid rgba(220,53,69,0.3); }
+
+    .btn-toggle {
+        width: 100%;
+        padding: 0.7rem;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.06);
+        color: rgba(255,255,255,0.8);
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-top: 0.5rem;
+    }
+
+    .btn-toggle:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: rgba(255,255,255,0.2);
+    }
+
+    /* ── Main content ── */
     .main-content {
-        background: white;
-        padding: 2rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 1.75rem;
+        border-radius: 16px;
     }
 
     .main-content h2 {
-        color: #dc3545;
+        color: #fff;
         margin-bottom: 1.5rem;
+        font-size: 1.3rem;
+        font-weight: 700;
     }
 
+    /* ── Tabs ── */
+    .tab-buttons {
+        display: flex;
+        gap: 0.25rem;
+        margin-bottom: 1.5rem;
+        background: rgba(255,255,255,0.04);
+        border-radius: 10px;
+        padding: 0.25rem;
+    }
+
+    .tab-button {
+        flex: 1;
+        padding: 0.6rem 1rem;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: rgba(255,255,255,0.45);
+        border-radius: 8px;
+        transition: all 0.2s;
+    }
+
+    .tab-button.active {
+        background: rgba(220,53,69,0.2);
+        color: #ff6b7a;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Request cards ── */
     .requests-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
     }
 
     .request-card {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 8px;
-        border-left: 4px solid #dc3545;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 1.25rem;
+        border-radius: 12px;
+        border-left: 3px solid #dc3545;
+        transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .request-card:hover {
+        border-color: #ff4d6d;
+        transform: translateY(-2px);
     }
 
     .request-card h4 {
-        color: #dc3545;
-        margin-bottom: 0.5rem;
+        color: #fff;
+        margin-bottom: 0.75rem;
+        font-size: 1rem;
     }
 
     .request-info {
-        font-size: 0.9rem;
-        color: #666;
-        line-height: 1.8;
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.6);
+        line-height: 1.9;
     }
 
     .request-info strong {
-        color: #333;
+        color: rgba(255,255,255,0.85);
     }
 
     .urgency-badge {
         display: inline-block;
-        padding: 0.25rem 0.75rem;
+        padding: 0.2rem 0.6rem;
         border-radius: 4px;
-        font-size: 0.85rem;
-        font-weight: bold;
-        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
-    .urgency-urgent {
-        background-color: #f8d7da;
-        color: #721c24;
-    }
+    .urgency-urgent { background: rgba(220,53,69,0.2); color: #ff6b7a; }
+    .urgency-normal { background: rgba(13,202,240,0.15); color: #0dcaf0; }
 
-    .urgency-normal {
-        background-color: #d1ecf1;
-        color: #0c5460;
-    }
-
-    .contact-btn {
-        margin-top: 1rem;
+    .btn-help {
+        margin-top: 0.75rem;
         width: 100%;
+        padding: 0.6rem;
+        background: linear-gradient(135deg, #28a745, #34ce57);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .btn-help:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-help:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-share {
+        margin-top: 0.75rem;
+        width: 100%;
+        padding: 0.6rem;
+        background: rgba(40,167,69,0.15);
+        color: #4caf50;
+        border: 1px solid rgba(40,167,69,0.3);
+        border-radius: 8px;
+        font-size: 0.88rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-share:hover { background: rgba(40,167,69,0.25); }
+
+    .contact-revealed {
+        margin-top: 0.75rem;
+        background: rgba(40,167,69,0.1);
+        border: 1px solid rgba(40,167,69,0.25);
+        border-radius: 8px;
+        padding: 0.6rem 0.75rem;
+        font-size: 0.85rem;
+        color: #4caf50;
     }
 
     .empty-state {
         text-align: center;
-        color: #666;
-        padding: 2rem;
+        color: rgba(255,255,255,0.35);
+        padding: 3rem 1rem;
+        font-size: 0.95rem;
     }
 
-    .empty-state p {
+    /* ── Contact modal ── */
+    .contact-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .contact-modal-overlay.active { display: flex; }
+
+    .contact-modal {
+        background: #1a1a1a;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 16px;
+        padding: 2rem;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+    }
+
+    .contact-modal h3 { color: #fff; margin-bottom: 0.5rem; }
+    .contact-modal p  { color: rgba(255,255,255,0.55); font-size: 0.9rem; margin-bottom: 1.5rem; }
+
+    .contact-detail {
+        background: rgba(40,167,69,0.1);
+        border: 1px solid rgba(40,167,69,0.3);
+        border-radius: 10px;
+        padding: 1rem;
         margin-bottom: 1rem;
     }
 
-    .tab-buttons {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 2rem;
-        border-bottom: 2px solid #eee;
-    }
+    .contact-detail .label { font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.08em; }
+    .contact-detail .value { font-size: 1.2rem; font-weight: 700; color: #4caf50; margin-top: 0.25rem; }
 
-    .tab-button {
-        padding: 0.75rem 1.5rem;
-        background: none;
-        border: none;
+    .btn-close-modal {
+        width: 100%;
+        padding: 0.75rem;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 10px;
+        color: rgba(255,255,255,0.7);
+        font-size: 0.9rem;
+        font-weight: 600;
         cursor: pointer;
-        font-size: 1rem;
-        border-bottom: 3px solid transparent;
-        color: #666;
-        transition: all 0.3s;
+        transition: background 0.2s;
     }
 
-    .tab-button.active {
-        color: #dc3545;
-        border-bottom-color: #dc3545;
-    }
-
-    .tab-content {
-        display: none;
-    }
-
-    .tab-content.active {
-        display: block;
-    }
+    .btn-close-modal:hover { background: rgba(255,255,255,0.14); }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
+
+    <!-- Sidebar -->
     <div class="sidebar">
         <div class="profile-section">
-            <h3>Profile</h3>
+            <h3>Your Profile</h3>
             <div class="profile-info">
-                <div><strong>Name:</strong> {{ user.full_name }}</div>
-                <div><strong>City:</strong> {{ user.city }}, {{ user.state }}</div>
-                <div><strong>Phone:</strong> {{ user.phone }}</div>
+                <div><strong>Name</strong>{{ user.full_name }}</div>
+                <div><strong>City</strong>{{ user.city }}, {{ user.state }}</div>
+                <div><strong>Phone</strong>{{ user.phone }}</div>
             </div>
         </div>
 
+        {% if donor_profile %}
         <div class="profile-section">
-            <div class="blood-badge">{{ donor_profile.blood_group }}</div>
-            <div class="profile-info" style="margin-top: 1rem;">
-                <div><strong>Age:</strong> {{ donor_profile.age }}</div>
-                <div><strong>Gender:</strong> {{ donor_profile.gender }}</div>
+            <div style="margin-bottom:1rem;">
+                <div class="blood-badge">{{ donor_profile.blood_group }}</div>
+            </div>
+            <div class="profile-info">
+                <div><strong>Age</strong>{{ donor_profile.age }}</div>
+                <div><strong>Gender</strong>{{ donor_profile.gender }}</div>
                 <div>
-                    <strong>Status:</strong>
+                    <strong>Status</strong>
                     {% if donor_profile.available_to_donate %}
-                    <span style="color: green; font-weight: bold;">Available</span>
+                    <span class="status-pill status-available">● Available</span>
                     {% else %}
-                    <span style="color: red; font-weight: bold;">Not Available</span>
+                    <span class="status-pill status-unavailable">● Unavailable</span>
                     {% endif %}
                 </div>
                 {% if donor_profile.last_donation_date %}
-                <div><strong>Last Donation:</strong> {{ donor_profile.last_donation_date.strftime('%d-%m-%Y') }}</div>
+                <div><strong>Last Donation</strong>{{ donor_profile.last_donation_date.strftime('%d %b %Y') }}</div>
                 {% endif %}
             </div>
         </div>
 
-        <button class="btn btn-secondary" style="width: 100%;" onclick="toggleAvailability()">
-            {% if donor_profile and donor_profile.available_to_donate %}
-            🔴 Mark Unavailable
-            {% else %}
-            🟢 Mark Available
-            {% endif %}
+        <button class="btn-toggle" onclick="toggleAvailability()">
+            {% if donor_profile.available_to_donate %}🔴 Mark as Unavailable{% else %}🟢 Mark as Available{% endif %}
         </button>
+        {% endif %}
     </div>
 
+    <!-- Main -->
     <div class="main-content">
-        <h2>Available Requests</h2>
+        <h2>Blood Requests</h2>
 
         <div class="tab-buttons">
-            <button class="tab-button active" onclick="switchTab('urgent-requests')">🚨 Urgent</button>
-            <button class="tab-button" onclick="switchTab('normal-requests')">📋 Normal</button>
-            <button class="tab-button" onclick="switchTab('my-matches')">✅ My Matches</button>
+            <button class="tab-button active" onclick="switchTab('urgent-requests', this)">🚨 Urgent</button>
+            <button class="tab-button" onclick="switchTab('normal-requests', this)">📋 Normal</button>
+            <button class="tab-button" onclick="switchTab('my-matches', this)">✅ My Matches</button>
         </div>
 
         <div id="urgent-requests" class="tab-content active">
-            <div class="requests-grid" id="urgentRequestsContainer">
-                <div class="empty-state">
-                    <p>No urgent requests at the moment</p>
-                </div>
+            <div class="requests-grid" id="urgentContainer">
+                <div class="empty-state">Loading urgent requests…</div>
             </div>
         </div>
 
         <div id="normal-requests" class="tab-content">
-            <div class="requests-grid" id="normalRequestsContainer">
-                <div class="empty-state">
-                    <p>No normal requests at the moment</p>
-                </div>
+            <div class="requests-grid" id="normalContainer">
+                <div class="empty-state">Loading normal requests…</div>
             </div>
         </div>
 
         <div id="my-matches" class="tab-content">
-            <div class="requests-grid" id="matchesContainer">
+            <div class="requests-grid">
                 {% if matches %}
                     {% for match in matches %}
                     <div class="request-card">
                         <h4>{{ match.request.user.full_name }}</h4>
                         <div class="request-info">
-                            <div><strong>Blood Type Needed:</strong> {{ match.request.blood_group }}</div>
+                            <div><strong>Blood Type:</strong> {{ match.request.blood_group }}</div>
                             <div><strong>Units:</strong> {{ match.request.units_needed }}</div>
                             <div><strong>Hospital:</strong> {{ match.request.hospital_name }}</div>
-                            <div><strong>Required By:</strong> {{ match.request.required_by.strftime('%d-%m-%Y %H:%M') }}</div>
-                            <div>
-                                {% if match.contact_shared %}
-                                <strong>Contact:</strong> {{ match.request.user.phone }}
-                                {% else %}
-                                <button class="btn btn-success contact-btn" onclick="shareContact({{ match.id }})">Share Contact</button>
-                                {% endif %}
-                            </div>
+                            <div><strong>Required By:</strong> {{ match.request.required_by.strftime('%d %b %Y %H:%M') }}</div>
                         </div>
+                        {% if match.contact_shared %}
+                        <div class="contact-revealed">
+                            📞 <strong>{{ match.request.user.phone }}</strong>
+                        </div>
+                        {% else %}
+                        <button class="btn-share" onclick="shareContact({{ match.id }}, this)">
+                            📞 Reveal Contact
+                        </button>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 {% else %}
-                <div class="empty-state">
-                    <p>No matches yet. Check urgent and normal requests to help someone!</p>
-                </div>
+                <div class="empty-state">No matches yet. Respond to requests to get matched!</div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<script>
-    function switchTab(tabName) {
-        // Hide all tabs
-        const tabs = document.querySelectorAll('.tab-content');
-        tabs.forEach(tab => tab.classList.remove('active'));
-        
-        // Remove active class from all buttons
-        const buttons = document.querySelectorAll('.tab-button');
-        buttons.forEach(btn => btn.classList.remove('active'));
-        
-        // Show selected tab
-        document.getElementById(tabName).classList.add('active');
-        
-        // Add active class to clicked button
-        event.target.classList.add('active');
+<!-- Contact revealed modal -->
+<div class="contact-modal-overlay" id="contactModal">
+    <div class="contact-modal">
+        <h3>✅ You're helping!</h3>
+        <p>Here are the seeker's contact details. Please coordinate the donation directly.</p>
+        <div class="contact-detail">
+            <div class="label">Seeker Name</div>
+            <div class="value" id="modalName">—</div>
+        </div>
+        <div class="contact-detail">
+            <div class="label">Phone Number</div>
+            <div class="value" id="modalPhone">—</div>
+        </div>
+        <div class="contact-detail">
+            <div class="label">Hospital</div>
+            <div class="value" id="modalHospital" style="font-size:1rem;">—</div>
+        </div>
+        <button class="btn-close-modal" onclick="closeContactModal()">Close</button>
+    </div>
+</div>
 
-        // Load requests if needed
-        if (tabName === 'urgent-requests' || tabName === 'normal-requests') {
-            loadRequests(tabName === 'urgent-requests' ? 'urgent' : 'normal');
-        }
+<script>
+    function switchTab(tabId, btn) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        btn.classList.add('active');
+        if (tabId === 'urgent-requests') loadRequests('urgent');
+        if (tabId === 'normal-requests') loadRequests('normal');
     }
 
     async function loadRequests(urgency) {
+        const container = document.getElementById(urgency === 'urgent' ? 'urgentContainer' : 'normalContainer');
         try {
-            const response = await fetch('{{ url_for("find_requests") }}');
-            const requests = await response.json();
-            
-            const filtered = requests.filter(r => r.urgency === urgency);
-            const container = document.getElementById(urgency === 'urgent' ? 'urgentRequestsContainer' : 'normalRequestsContainer');
-            
-            if (filtered.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No ' + urgency + ' requests at the moment</p></div>';
+            const res  = await fetch('{{ url_for("find_requests") }}');
+            const all  = await res.json();
+            if (!Array.isArray(all)) {
+                container.innerHTML = '<div class="empty-state">Could not load requests.</div>';
                 return;
             }
-
-            container.innerHTML = filtered.map(request => `
+            const list = all.filter(r => r.urgency === urgency);
+            if (list.length === 0) {
+                container.innerHTML = `<div class="empty-state">No ${urgency} requests matching your blood group right now.</div>`;
+                return;
+            }
+            container.innerHTML = list.map(r => `
                 <div class="request-card">
-                    <h4>${request.user.full_name}</h4>
-                    <div class="request-info">
-                        <div><strong>Blood Type:</strong> ${request.blood_group}</div>
-                        <div><strong>Units Needed:</strong> ${request.units_needed}</div>
-                        <div><strong>Hospital:</strong> ${request.hospital_name}</div>
-                        <div><strong>Location:</strong> ${request.user.city}</div>
-                        <div><strong>Required By:</strong> ${new Date(request.required_by).toLocaleString()}</div>
-                        <button class="btn btn-success contact-btn" onclick="respondToRequest(${request.id}, '${request.user.phone}')">I Can Help</button>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+                        <h4 style="margin:0">${r.user.full_name}</h4>
+                        <span class="urgency-badge urgency-${r.urgency}">${r.urgency}</span>
                     </div>
+                    <div class="request-info">
+                        <div><strong>Blood Type:</strong> ${r.blood_group}</div>
+                        <div><strong>Units Needed:</strong> ${r.units_needed}</div>
+                        <div><strong>Hospital:</strong> ${r.hospital_name}</div>
+                        <div><strong>Location:</strong> ${r.user.city}</div>
+                        <div><strong>Required By:</strong> ${new Date(r.required_by).toLocaleString()}</div>
+                    </div>
+                    <button class="btn-help" onclick="respondToRequest(${r.id}, this)">💉 I Can Help</button>
                 </div>
             `).join('');
-        } catch (error) {
-            console.error('Error loading requests:', error);
+        } catch (err) {
+            container.innerHTML = '<div class="empty-state">Error loading requests.</div>';
         }
     }
 
-    function respondToRequest(requestId, phone) {
-        alert(`You have accepted to help!\n\nSeeker's Contact: ${phone}\n\nPlease coordinate donation details with them.`);
+    async function respondToRequest(requestId, btn) {
+        btn.disabled    = true;
+        btn.textContent = 'Submitting…';
+        try {
+            const res    = await fetch('/api/donor/respond', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ request_id: requestId })
+            });
+            const result = await res.json();
+            if (res.ok) {
+                document.getElementById('modalName').textContent    = result.seeker_name;
+                document.getElementById('modalPhone').textContent   = result.seeker_phone;
+                document.getElementById('modalHospital').textContent = result.hospital;
+                document.getElementById('contactModal').classList.add('active');
+                btn.textContent = '✅ Responded';
+            } else {
+                alert(result.error || 'Failed to respond.');
+                btn.disabled    = false;
+                btn.textContent = '💉 I Can Help';
+            }
+        } catch (err) {
+            alert('Network error. Please try again.');
+            btn.disabled    = false;
+            btn.textContent = '💉 I Can Help';
+        }
     }
 
-    function shareContact(matchId) {
-        fetch(`{{ url_for("accept_match", match_id=0) }}`.replace('0', matchId), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
+    async function shareContact(matchId, btn) {
+        btn.disabled    = true;
+        btn.textContent = 'Loading…';
+        try {
+            const res    = await fetch(`/api/accept-match/${matchId}`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const result = await res.json();
+            if (res.ok) {
+                // Replace button with revealed contact
+                const div       = document.createElement('div');
+                div.className   = 'contact-revealed';
+                div.innerHTML   = `📞 <strong>${result.seeker_phone}</strong>`;
+                btn.replaceWith(div);
+            } else {
+                alert(result.error || 'Failed.');
+                btn.disabled    = false;
+                btn.textContent = '📞 Reveal Contact';
             }
-        }).then(response => {
-            if (response.ok) {
-                alert('Contact information shared successfully!');
-                location.reload();
-            }
-        });
+        } catch (err) {
+            alert('Network error.');
+            btn.disabled    = false;
+            btn.textContent = '📞 Reveal Contact';
+        }
+    }
+
+    function closeContactModal() {
+        document.getElementById('contactModal').classList.remove('active');
+        location.reload(); // refresh so My Matches tab updates
     }
 
     async function toggleAvailability() {
-        const currentlyAvailable = {{ 'true' if donor_profile and donor_profile.available_to_donate else 'false' }};
-        const newStatus = !currentlyAvailable;
+        const current = {{ 'true' if donor_profile and donor_profile.available_to_donate else 'false' }};
         try {
-            const response = await fetch('/api/donor/update-availability', {
-                method: 'POST',
+            const res = await fetch('/api/donor/update-availability', {
+                method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ available_to_donate: newStatus })
+                body:    JSON.stringify({ available_to_donate: !current })
             });
-            const result = await response.json();
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert(result.error || 'Failed to update availability');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
-        }
+            if (res.ok) location.reload();
+            else alert('Failed to update availability.');
+        } catch { alert('Network error.'); }
     }
 
-    // Load requests on page load
-    window.addEventListener('load', function() {
-        loadRequests('urgent');
-    });
+    // Load urgent requests on page load
+    window.addEventListener('load', () => loadRequests('urgent'));
 </script>
 {% endblock %}

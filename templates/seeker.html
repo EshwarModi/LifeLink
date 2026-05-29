@@ -6,178 +6,218 @@
 <style>
     .dashboard-container {
         display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 2rem;
+        grid-template-columns: 260px 1fr;
+        gap: 1.5rem;
+        align-items: start;
     }
 
+    /* ── Sidebar ── */
     .sidebar {
-        background: white;
-        padding: 2rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        height: fit-content;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 1.75rem;
+        border-radius: 16px;
+        position: sticky;
+        top: 1rem;
     }
 
     .profile-section {
-        border-bottom: 2px solid #eee;
-        padding-bottom: 1.5rem;
-        margin-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        padding-bottom: 1.25rem;
+        margin-bottom: 1.25rem;
     }
 
     .profile-section h3 {
-        color: #dc3545;
+        color: #ff6b7a;
         margin-bottom: 1rem;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 700;
     }
 
     .profile-info {
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.75);
     }
 
     .profile-info strong {
-        color: #666;
+        color: rgba(255,255,255,0.4);
+        font-weight: 500;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
+    .btn-create {
+        width: 100%;
+        padding: 0.75rem;
+        background: linear-gradient(135deg, #dc3545, #ff4d6d);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(220,53,69,0.35);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-create:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(220,53,69,0.5); }
+
+    /* ── Main ── */
     .main-content {
-        background: white;
-        padding: 2rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 1.75rem;
+        border-radius: 16px;
     }
 
     .main-content h2 {
-        color: #dc3545;
+        color: #fff;
         margin-bottom: 1.5rem;
+        font-size: 1.3rem;
+        font-weight: 700;
     }
 
-    .action-buttons {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-
-    .requests-list {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
+    /* ── Request cards ── */
+    .requests-list { display: flex; flex-direction: column; gap: 1rem; }
 
     .request-item {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 8px;
-        border-left: 4px solid #dc3545;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        padding: 1.25rem;
+        border-radius: 12px;
+        border-left: 3px solid #dc3545;
     }
 
     .request-header {
         display: flex;
         justify-content: space-between;
-        align-items: start;
-        margin-bottom: 1rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
     }
 
     .request-title {
-        color: #dc3545;
+        color: #fff;
         margin: 0;
-        font-size: 1.1rem;
+        font-size: 1.05rem;
+        font-weight: 700;
     }
 
     .status-badge {
-        display: inline-block;
         padding: 0.25rem 0.75rem;
-        border-radius: 4px;
-        font-size: 0.85rem;
-        font-weight: bold;
+        border-radius: 100px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
-    .status-open {
-        background-color: #ffc107;
-        color: #000;
-    }
-
-    .status-fulfilled {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .status-cancelled {
-        background-color: #6c757d;
-        color: white;
-    }
+    .status-open      { background: rgba(255,193,7,0.15);  color: #ffc107; border: 1px solid rgba(255,193,7,0.3); }
+    .status-fulfilled { background: rgba(40,167,69,0.15);  color: #4caf50; border: 1px solid rgba(40,167,69,0.3); }
+    .status-cancelled { background: rgba(108,117,125,0.15); color: #adb5bd; border: 1px solid rgba(108,117,125,0.3); }
 
     .urgency-badge {
         display: inline-block;
-        padding: 0.25rem 0.75rem;
+        padding: 0.2rem 0.6rem;
         border-radius: 4px;
-        font-size: 0.85rem;
-        font-weight: bold;
-        margin-right: 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.75rem;
     }
 
-    .urgency-urgent {
-        background-color: #f8d7da;
-        color: #721c24;
-    }
-
-    .urgency-normal {
-        background-color: #d1ecf1;
-        color: #0c5460;
-    }
+    .urgency-urgent { background: rgba(220,53,69,0.2); color: #ff6b7a; }
+    .urgency-normal { background: rgba(13,202,240,0.15); color: #0dcaf0; }
 
     .request-info {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-        font-size: 0.95rem;
-        color: #666;
-        margin-bottom: 1rem;
+        gap: 0.5rem 1rem;
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.6);
+        margin-bottom: 0.75rem;
     }
 
-    .info-item strong {
-        color: #333;
+    .info-item strong { color: rgba(255,255,255,0.85); }
+
+    .request-address {
+        font-size: 0.83rem;
+        color: rgba(255,255,255,0.45);
+        margin-bottom: 0.75rem;
     }
 
-    .request-actions {
-        display: flex;
-        gap: 0.5rem;
+    .matched-donors {
+        background: rgba(40,167,69,0.08);
+        border: 1px solid rgba(40,167,69,0.2);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
     }
+
+    .matched-donors h4 { color: #4caf50; font-size: 0.85rem; margin-bottom: 0.5rem; }
+
+    .donor-item {
+        background: rgba(255,255,255,0.04);
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        margin-bottom: 0.4rem;
+        font-size: 0.83rem;
+        color: rgba(255,255,255,0.75);
+        border-left: 2px solid #4caf50;
+    }
+
+    .request-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+    .btn-action {
+        padding: 0.45rem 1rem;
+        border-radius: 8px;
+        border: none;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+
+    .btn-action:hover { opacity: 0.85; }
+    .btn-edit      { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); border: 1px solid rgba(255,255,255,0.15); }
+    .btn-fulfill   { background: rgba(40,167,69,0.2);  color: #4caf50; border: 1px solid rgba(40,167,69,0.3); }
+    .btn-cancel-req { background: rgba(108,117,125,0.2); color: #adb5bd; border: 1px solid rgba(108,117,125,0.3); }
 
     .empty-state {
         text-align: center;
-        color: #666;
-        padding: 2rem;
+        color: rgba(255,255,255,0.35);
+        padding: 3rem 1rem;
+        font-size: 0.95rem;
     }
 
-    .empty-state p {
-        margin-bottom: 1rem;
-    }
-
+    /* ── Modals ── */
     .modal {
         display: none;
         position: fixed;
+        inset: 0;
         z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.4);
-    }
-
-    .modal.active {
-        display: flex;
+        background: rgba(0,0,0,0.6);
         align-items: center;
         justify-content: center;
     }
 
+    .modal.active { display: flex; }
+
     .modal-content {
-        background-color: white;
+        background: #1a1a1a;
+        border: 1px solid rgba(255,255,255,0.12);
         padding: 2rem;
-        border-radius: 8px;
-        max-width: 600px;
+        border-radius: 16px;
+        max-width: 560px;
         width: 90%;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        max-height: 90vh;
+        overflow-y: auto;
     }
 
     .modal-header {
@@ -187,282 +227,365 @@
         margin-bottom: 1.5rem;
     }
 
-    .modal-header h2 {
-        margin: 0;
-        color: #dc3545;
-    }
+    .modal-header h2 { margin: 0; color: #fff; font-size: 1.2rem; }
 
     .close-btn {
         background: none;
         border: none;
         font-size: 1.5rem;
         cursor: pointer;
-        color: #999;
+        color: rgba(255,255,255,0.4);
+        line-height: 1;
     }
 
-    .close-btn:hover {
-        color: #333;
+    .close-btn:hover { color: #fff; }
+
+    /* Modal form fields */
+    .modal-content .form-group { margin-bottom: 1rem; }
+
+    .modal-content label {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: rgba(255,255,255,0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
-    .matched-donors {
-        background: #e8f5e9;
-        padding: 1rem;
-        border-radius: 4px;
-        margin-top: 1rem;
+    .modal-content input,
+    .modal-content select,
+    .modal-content textarea {
+        width: 100%;
+        padding: 0.7rem 0.9rem;
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 8px;
+        font-size: 0.9rem;
+        color: #fff;
+        font-family: inherit;
+        transition: border-color 0.2s;
     }
 
-    .matched-donors h4 {
-        color: #2e7d32;
-        margin-bottom: 0.5rem;
+    .modal-content input::placeholder,
+    .modal-content textarea::placeholder { color: rgba(255,255,255,0.2); }
+
+    .modal-content input:focus,
+    .modal-content select:focus,
+    .modal-content textarea:focus {
+        outline: none;
+        border-color: #dc3545;
+        box-shadow: 0 0 0 3px rgba(220,53,69,0.15);
     }
 
-    .donor-item {
-        background: white;
-        padding: 0.75rem;
-        border-radius: 4px;
-        margin-bottom: 0.5rem;
-        border-left: 3px solid #4caf50;
+    .modal-content select option { background: #1a1a1a; color: #fff; }
+    .modal-content textarea { resize: vertical; min-height: 80px; }
+
+    .modal-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+
+    .btn-submit-modal {
+        width: 100%;
+        padding: 0.85rem;
+        background: linear-gradient(135deg, #dc3545, #ff4d6d);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 0.5rem;
+        transition: opacity 0.2s;
     }
+
+    .btn-submit-modal:hover { opacity: 0.9; }
+    .btn-submit-modal:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="dashboard-container">
+
+    <!-- Sidebar -->
     <div class="sidebar">
         <div class="profile-section">
-            <h3>Profile</h3>
+            <h3>Your Profile</h3>
             <div class="profile-info">
-                <div><strong>Name:</strong> {{ user.full_name }}</div>
-                <div><strong>City:</strong> {{ user.city }}, {{ user.state }}</div>
-                <div><strong>Phone:</strong> {{ user.phone }}</div>
+                <div><strong>Name</strong>{{ user.full_name }}</div>
+                <div><strong>City</strong>{{ user.city }}, {{ user.state }}</div>
+                <div><strong>Phone</strong>{{ user.phone }}</div>
             </div>
         </div>
-
-        <button class="btn btn-primary" style="width: 100%;" onclick="openCreateRequestModal()">🆕 Create Request</button>
+        <button class="btn-create" onclick="openModal('createModal')">🆕 New Blood Request</button>
     </div>
 
+    <!-- Main -->
     <div class="main-content">
-        <h2>Blood Requests</h2>
+        <h2>Your Blood Requests</h2>
 
-        <div id="requestsList">
-            {% if requests %}
-                <div class="requests-list">
-                    {% for request in requests %}
-                    <div class="request-item">
-                        <div class="request-header">
-                            <h3 class="request-title">{{ request.blood_group }} Needed</h3>
-                            <span class="status-badge status-{{ request.status }}">{{ request.status.upper() }}</span>
-                        </div>
+        {% if requests %}
+        <div class="requests-list">
+            {% for req in requests %}
+            <div class="request-item">
+                <div class="request-header">
+                    <h3 class="request-title">🩸 {{ req.blood_group }} — {{ req.units_needed }} unit{{ 's' if req.units_needed > 1 }}</h3>
+                    <span class="status-badge status-{{ req.status }}">{{ req.status }}</span>
+                </div>
 
-                        <div style="margin-bottom: 0.5rem;">
-                            <span class="urgency-badge urgency-{{ request.urgency }}">{{ request.urgency.upper() }}</span>
-                        </div>
+                <span class="urgency-badge urgency-{{ req.urgency }}">{{ req.urgency }}</span>
 
-                        <div class="request-info">
-                            <div class="info-item"><strong>Hospital:</strong> {{ request.hospital_name }}</div>
-                            <div class="info-item"><strong>Units Needed:</strong> {{ request.units_needed }}</div>
-                            <div class="info-item"><strong>Required By:</strong> {{ request.required_by.strftime('%d-%m-%Y %H:%M') }}</div>
-                            <div class="info-item"><strong>Reason:</strong> {{ request.reason[:40] }}...</div>
-                        </div>
+                <div class="request-info">
+                    <div class="info-item"><strong>Hospital:</strong> {{ req.hospital_name }}</div>
+                    <div class="info-item"><strong>Required By:</strong> {{ req.required_by.strftime('%d %b %Y %H:%M') }}</div>
+                    <div class="info-item"><strong>Reason:</strong> {{ req.reason[:50] }}{% if req.reason|length > 50 %}…{% endif %}</div>
+                    <div class="info-item"><strong>Created:</strong> {{ req.created_at.strftime('%d %b %Y') }}</div>
+                </div>
 
-                        <p style="color: #666; font-size: 0.9rem; margin: 0.5rem 0;">
-                            <strong>Address:</strong> {{ request.hospital_address }}
-                        </p>
+                <p class="request-address">📍 {{ req.hospital_address }}</p>
 
-                        {% if request.matches %}
-                        <div class="matched-donors">
-                            <h4>✅ {{ request.matches|length }} Donor(s) Matched</h4>
-                            {% for match in request.matches %}
-                            <div class="donor-item">
-                                <strong>{{ match.donor.full_name }}</strong> - {{ match.donor.city }}
-                                <br>
-                                <small>Contact: {{ match.donor.phone if match.contact_shared else '📞 Waiting to share' }}</small>
-                            </div>
-                            {% endfor %}
-                        </div>
+                {% if req.matches %}
+                <div class="matched-donors">
+                    <h4>✅ {{ req.matches|length }} Donor(s) Matched</h4>
+                    {% for match in req.matches %}
+                    <div class="donor-item">
+                        <strong>{{ match.donor.full_name }}</strong> — {{ match.donor.city }}
+                        {% if match.contact_shared %}
+                        &nbsp;·&nbsp; 📞 {{ match.donor.phone }}
+                        {% else %}
+                        &nbsp;·&nbsp; <em style="color:rgba(255,255,255,0.35)">Contact pending</em>
                         {% endif %}
-
-                        <div class="request-actions">
-                            {% if request.status == 'open' %}
-                            <button class="btn btn-secondary" onclick="editRequest({{ request.id }})">Edit</button>
-                            <button class="btn btn-success" onclick="markAsFulfilled({{ request.id }})">Mark Fulfilled</button>
-                            <button class="btn btn-secondary" onclick="cancelRequest({{ request.id }})">Cancel</button>
-                            {% endif %}
-                        </div>
                     </div>
                     {% endfor %}
                 </div>
-            {% else %}
-            <div class="empty-state">
-                <p>📋 You haven't created any blood requests yet</p>
-                <button class="btn btn-primary" onclick="openCreateRequestModal()">Create Your First Request</button>
+                {% endif %}
+
+                {% if req.status == 'open' %}
+                <div class="request-actions">
+                    <button class="btn-action btn-edit" onclick="openEditModal({{ req.id }}, {{ req|tojson }})">✏️ Edit</button>
+                    <button class="btn-action btn-fulfill" onclick="updateStatus({{ req.id }}, 'fulfilled')">✅ Mark Fulfilled</button>
+                    <button class="btn-action btn-cancel-req" onclick="updateStatus({{ req.id }}, 'cancelled')">✕ Cancel</button>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="empty-state">
+            <p style="font-size:2rem;margin-bottom:.75rem;">📋</p>
+            <p>No blood requests yet.</p>
+            <button class="btn-create" style="width:auto;padding:.75rem 2rem;margin-top:1rem;" onclick="openModal('createModal')">Create Your First Request</button>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- Create Request Modal -->
-<div id="createRequestModal" class="modal">
+<!-- ── Create Request Modal ── -->
+<div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Create Blood Request</h2>
-            <button class="close-btn" onclick="closeCreateRequestModal()">×</button>
+            <h2>🆕 New Blood Request</h2>
+            <button class="close-btn" onclick="closeModal('createModal')">×</button>
         </div>
-
-        <form id="createRequestForm">
-            <div class="form-group">
-                <label for="blood_group">Blood Group Needed *</label>
-                <select id="blood_group" name="blood_group" required>
-                    <option value="">Select blood group</option>
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                </select>
+        <form id="createForm" onsubmit="submitCreate(event)">
+            <div class="modal-two-col">
+                <div class="form-group">
+                    <label>Blood Group *</label>
+                    <select name="blood_group" required>
+                        <option value="">Select</option>
+                        {% for bg in ['A+','A-','B+','B-','O+','O-','AB+','AB-'] %}
+                        <option value="{{ bg }}">{{ bg }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Units Needed *</label>
+                    <input type="number" name="units_needed" min="1" max="20" placeholder="e.g. 2" required>
+                </div>
             </div>
-
             <div class="form-group">
-                <label for="units_needed">Units Needed *</label>
-                <input type="number" id="units_needed" name="units_needed" min="1" required>
-            </div>
-
-            <div class="form-group">
-                <label for="urgency">Urgency Level *</label>
-                <select id="urgency" name="urgency" required>
+                <label>Urgency *</label>
+                <select name="urgency" required>
                     <option value="normal">Normal</option>
                     <option value="urgent">Urgent</option>
                 </select>
             </div>
-
             <div class="form-group">
-                <label for="reason">Reason for Blood Transfusion *</label>
-                <textarea id="reason" name="reason" required></textarea>
+                <label>Reason *</label>
+                <textarea name="reason" placeholder="e.g. Surgery scheduled tomorrow" required></textarea>
             </div>
-
             <div class="form-group">
-                <label for="hospital_name">Hospital Name *</label>
-                <input type="text" id="hospital_name" name="hospital_name" required>
+                <label>Hospital Name *</label>
+                <input type="text" name="hospital_name" placeholder="e.g. City General Hospital" required>
             </div>
-
             <div class="form-group">
-                <label for="hospital_address">Hospital Address *</label>
-                <textarea id="hospital_address" name="hospital_address" required></textarea>
+                <label>Hospital Address *</label>
+                <textarea name="hospital_address" placeholder="Full address" required style="min-height:60px;"></textarea>
             </div>
-
             <div class="form-group">
-                <label for="required_by">Required By Date & Time *</label>
-                <input type="datetime-local" id="required_by" name="required_by" required>
+                <label>Required By *</label>
+                <input type="datetime-local" name="required_by" required>
             </div>
+            <button type="submit" class="btn-submit-modal" id="createSubmitBtn">Create Request</button>
+        </form>
+    </div>
+</div>
 
-            <div class="form-group">
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Create Request</button>
+<!-- ── Edit Request Modal ── -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>✏️ Edit Request</h2>
+            <button class="close-btn" onclick="closeModal('editModal')">×</button>
+        </div>
+        <form id="editForm" onsubmit="submitEdit(event)">
+            <input type="hidden" id="editRequestId">
+            <div class="modal-two-col">
+                <div class="form-group">
+                    <label>Blood Group *</label>
+                    <select id="editBloodGroup" name="blood_group" required>
+                        {% for bg in ['A+','A-','B+','B-','O+','O-','AB+','AB-'] %}
+                        <option value="{{ bg }}">{{ bg }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Units Needed *</label>
+                    <input type="number" id="editUnits" name="units_needed" min="1" max="20" required>
+                </div>
             </div>
+            <div class="form-group">
+                <label>Urgency *</label>
+                <select id="editUrgency" name="urgency" required>
+                    <option value="normal">Normal</option>
+                    <option value="urgent">Urgent</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Reason *</label>
+                <textarea id="editReason" name="reason" required></textarea>
+            </div>
+            <div class="form-group">
+                <label>Hospital Name *</label>
+                <input type="text" id="editHospitalName" name="hospital_name" required>
+            </div>
+            <div class="form-group">
+                <label>Hospital Address *</label>
+                <textarea id="editHospitalAddress" name="hospital_address" required style="min-height:60px;"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Required By *</label>
+                <input type="datetime-local" id="editRequiredBy" name="required_by" required>
+            </div>
+            <button type="submit" class="btn-submit-modal" id="editSubmitBtn">Save Changes</button>
         </form>
     </div>
 </div>
 
 <script>
-    function openCreateRequestModal() {
-        document.getElementById('createRequestModal').classList.add('active');
-    }
+    function openModal(id)  { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    function closeCreateRequestModal() {
-        document.getElementById('createRequestModal').classList.remove('active');
-    }
+    // Close on backdrop click
+    document.querySelectorAll('.modal').forEach(m => {
+        m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
+    });
 
-    document.getElementById('createRequestForm').addEventListener('submit', async function(e) {
+    // ── Create ──
+    async function submitCreate(e) {
         e.preventDefault();
+        const btn  = document.getElementById('createSubmitBtn');
+        const form = document.getElementById('createForm');
+        const fd   = new FormData(form);
+        const data = Object.fromEntries(fd.entries());
 
-        const formData = new FormData(this);
-        const data = {
-            blood_group: formData.get('blood_group'),
-            units_needed: formData.get('units_needed'),
-            urgency: formData.get('urgency'),
-            reason: formData.get('reason'),
-            hospital_name: formData.get('hospital_name'),
-            hospital_address: formData.get('hospital_address'),
-            required_by: formData.get('required_by')
-        };
+        btn.disabled    = true;
+        btn.textContent = 'Creating…';
 
         try {
-            const response = await fetch('{{ url_for("create_request") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-
-            const result = await response.json();
-
-            if (response.ok) {
-                alert('Blood request created successfully!');
-                closeCreateRequestModal();
-                location.reload();
-            } else {
-                alert(result.error || 'Error creating request');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
-        }
-    });
-
-    async function markAsFulfilled(requestId) {
-        if (!confirm('Mark this request as fulfilled?')) return;
-        try {
-            const response = await fetch(`/seeker/update-request/${requestId}`, {
-                method: 'POST',
+            const res    = await fetch('{{ url_for("create_request") }}', {
+                method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'fulfilled' })
+                body:    JSON.stringify(data)
             });
-            const result = await response.json();
-            if (response.ok) {
+            const result = await res.json();
+            if (res.ok) {
+                closeModal('createModal');
                 location.reload();
             } else {
-                alert(result.error || 'Failed to update request');
+                alert(result.error || 'Failed to create request.');
+                btn.disabled    = false;
+                btn.textContent = 'Create Request';
             }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
+        } catch {
+            alert('Network error. Please try again.');
+            btn.disabled    = false;
+            btn.textContent = 'Create Request';
         }
     }
 
-    async function cancelRequest(requestId) {
-        if (!confirm('Are you sure you want to cancel this request?')) return;
+    // ── Edit ──
+    function openEditModal(id, req) {
+        document.getElementById('editRequestId').value          = id;
+        document.getElementById('editBloodGroup').value         = req.blood_group;
+        document.getElementById('editUnits').value              = req.units_needed;
+        document.getElementById('editUrgency').value            = req.urgency;
+        document.getElementById('editReason').value             = req.reason;
+        document.getElementById('editHospitalName').value       = req.hospital_name;
+        document.getElementById('editHospitalAddress').value    = req.hospital_address;
+        // Format datetime-local value
+        const dt = new Date(req.required_by);
+        const pad = n => String(n).padStart(2,'0');
+        document.getElementById('editRequiredBy').value =
+            `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+        openModal('editModal');
+    }
+
+    async function submitEdit(e) {
+        e.preventDefault();
+        const btn  = document.getElementById('editSubmitBtn');
+        const id   = document.getElementById('editRequestId').value;
+        const fd   = new FormData(document.getElementById('editForm'));
+        const data = Object.fromEntries(fd.entries());
+        delete data[''];  // remove hidden field artifact
+
+        btn.disabled    = true;
+        btn.textContent = 'Saving…';
+
         try {
-            const response = await fetch(`/seeker/update-request/${requestId}`, {
-                method: 'POST',
+            const res    = await fetch(`/seeker/edit-request/${id}`, {
+                method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'cancelled' })
+                body:    JSON.stringify(data)
             });
-            const result = await response.json();
-            if (response.ok) {
+            const result = await res.json();
+            if (res.ok) {
+                closeModal('editModal');
                 location.reload();
             } else {
-                alert(result.error || 'Failed to cancel request');
+                alert(result.error || 'Failed to save changes.');
+                btn.disabled    = false;
+                btn.textContent = 'Save Changes';
             }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
+        } catch {
+            alert('Network error. Please try again.');
+            btn.disabled    = false;
+            btn.textContent = 'Save Changes';
         }
     }
 
-    function editRequest(requestId) {
-        alert('Edit feature coming soon!');
+    // ── Status update ──
+    async function updateStatus(id, status) {
+        const label = status === 'fulfilled' ? 'Mark this request as fulfilled?' : 'Cancel this request?';
+        if (!confirm(label)) return;
+        try {
+            const res    = await fetch(`/seeker/update-request/${id}`, {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ status })
+            });
+            const result = await res.json();
+            if (res.ok) location.reload();
+            else alert(result.error || 'Failed to update.');
+        } catch { alert('Network error.'); }
     }
-
-    // Close modal when clicking outside
-    window.addEventListener('click', function(event) {
-        const modal = document.getElementById('createRequestModal');
-        if (event.target === modal) {
-            closeCreateRequestModal();
-        }
-    });
 </script>
 {% endblock %}

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}LifeLink - Blood Donor & Seeker Platform{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <style>
         * {
             margin: 0;
@@ -59,6 +60,7 @@
             padding: 2rem;
         }
 
+        /* ── Buttons ── */
         .btn {
             padding: 0.75rem 1.5rem;
             border: none;
@@ -75,28 +77,23 @@
             color: white;
         }
 
-        .btn-primary:hover {
-            background-color: #c82333;
-        }
+        .btn-primary:hover { background-color: #c82333; }
 
         .btn-secondary {
             background-color: #6c757d;
             color: white;
         }
 
-        .btn-secondary:hover {
-            background-color: #5a6268;
-        }
+        .btn-secondary:hover { background-color: #5a6268; }
 
         .btn-success {
             background-color: #28a745;
             color: white;
         }
 
-        .btn-success:hover {
-            background-color: #218838;
-        }
+        .btn-success:hover { background-color: #218838; }
 
+        /* ── Footer ── */
         footer {
             background-color: #0a0a0a;
             color: rgba(255,255,255,0.35);
@@ -106,6 +103,7 @@
             border-top: 1px solid rgba(255,255,255,0.06);
         }
 
+        /* ── Alerts ── */
         .alert {
             padding: 1rem;
             margin-bottom: 1rem;
@@ -136,7 +134,9 @@
             border: 1px solid #bee5eb;
         }
 
-        form {
+        /* ── Dashboard / modal form styles (scoped, not global) ── */
+        .dashboard-form,
+        .modal-content form {
             background-color: white;
             padding: 2rem;
             border-radius: 8px;
@@ -145,38 +145,58 @@
             margin: 0 auto;
         }
 
-        form .form-group {
+        .dashboard-form .form-group,
+        .modal-content .form-group {
             margin-bottom: 1.5rem;
         }
 
-        label {
+        .dashboard-form label,
+        .modal-content label {
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
+            color: #333;
         }
 
-        input, textarea, select {
+        .dashboard-form input,
+        .dashboard-form textarea,
+        .dashboard-form select,
+        .modal-content input,
+        .modal-content textarea,
+        .modal-content select {
             width: 100%;
             padding: 0.75rem;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 1rem;
             font-family: inherit;
+            color: #333;
+            background: #fff;
         }
 
-        input:focus, textarea:focus, select:focus {
+        .dashboard-form input:focus,
+        .dashboard-form textarea:focus,
+        .dashboard-form select:focus,
+        .modal-content input:focus,
+        .modal-content textarea:focus,
+        .modal-content select:focus {
             outline: none;
             border-color: #dc3545;
             box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
         }
 
-        textarea {
+        .modal-content textarea {
             resize: vertical;
             min-height: 100px;
         }
 
-        {% block extra_styles %}{% endblock %}
+        /* Generic form-group spacing used across pages */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
     </style>
+
+    {% block extra_styles %}{% endblock %}
 </head>
 <body>
     <header>
