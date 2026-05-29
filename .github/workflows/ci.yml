@@ -6,12 +6,12 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
 
     env:
       FLASK_ENV: testing
@@ -28,13 +28,27 @@ jobs:
         with:
           python-version: "3.12"
           cache: "pip"
+          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Install without psycopg2-binary (not needed for SQLite CI tests)
-          pip install Flask==2.3.3 Flask-SQLAlchemy==3.0.5 Flask-Migrate==4.0.4 \
-            Werkzeug==2.3.7 SQLAlchemy==2.0.33 python-dotenv==1.0.0 pytest==7.4.2
+          pip install Flask==2.3.3 \
+            Flask-SQLAlchemy==3.0.5 \
+            Flask-Migrate==4.0.4 \
+            Werkzeug==2.3.7 \
+            SQLAlchemy==2.0.33 \
+            python-dotenv==1.0.0 \
+            pytest==7.4.2
+
+      - name: Verify test discovery
+        run: |
+          echo "=== Repo structure ==="
+          find . -name "pytest.ini" -o -name "test_*.py" | head -20
+          echo "=== Python path ==="
+          python -c "import sys; print(sys.path)"
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short
+        run: |
+          cd LifeLink-main/LifeLink-main
+          python -m pytest tests/ -v --tb=short
