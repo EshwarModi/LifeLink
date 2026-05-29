@@ -9,9 +9,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
 
     env:
       FLASK_ENV: testing
@@ -27,8 +24,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"
-          cache-dependency-path: requirements.txt
 
       - name: Install dependencies
         run: |
@@ -41,14 +36,5 @@ jobs:
             python-dotenv==1.0.0 \
             pytest==7.4.2
 
-      - name: Verify test discovery
-        run: |
-          echo "=== Repo structure ==="
-          find . -name "pytest.ini" -o -name "test_*.py" | head -20
-          echo "=== Python path ==="
-          python -c "import sys; print(sys.path)"
-
       - name: Run tests
-        run: |
-          cd LifeLink-main/LifeLink-main
-          python -m pytest tests/ -v --tb=short
+        run: python -m pytest tests/ -v --tb=short

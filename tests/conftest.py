@@ -1,20 +1,19 @@
 import os
 import pytest
 
-# Must be set before importing app
+# Must be set BEFORE importing app
 os.environ['FLASK_ENV']    = 'testing'
 os.environ['SECRET_KEY']   = 'test-secret-key-for-ci'
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
-from app import app as flask_app, db as _db
+from app import app as _app, db as _db  # noqa: E402
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='function')
 def app():
-    flask_app.config['TESTING']              = True
-    flask_app.config['WTF_CSRF_ENABLED']     = False
-    flask_app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    return flask_app
+    _app.config['TESTING']               = True
+    _app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    return _app
 
 
 @pytest.fixture(scope='function')
@@ -28,4 +27,5 @@ def db(app):
 
 @pytest.fixture(scope='function')
 def client(app, db):
-    return app.test_client()
+    with app.test_client() as c:
+        yield c
