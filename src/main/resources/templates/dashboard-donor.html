@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Donor Dashboard — LifeLink</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+    <!-- Persistent Navbar -->
+    <nav class="navbar">
+        <a class="navbar-brand" th:href="@{/dashboard}">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            Life<span>Link</span>
+        </a>
+        <ul class="navbar-nav">
+            <li>
+                <div class="user-pill">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <strong th:text="${currentUser.fullName}">Donor Name</strong> (Donor: <span class="badge badge-blood" style="padding: 0.15rem 0.5rem; font-size: 0.75rem;" th:text="${profile.bloodGroup}">A+</span>)
+                </div>
+            </li>
+            <li>
+                <form th:action="@{/logout}" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-outline-dark btn-sm">Sign Out</button>
+                </form>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        
+        <!-- Feedback Banner Alerts -->
+        <div th:if="${param.matchAccepted}" class="alert alert-success">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Thank you for volunteering! Match accepted. Seeker contact details are now revealed below.
+        </div>
+        <div th:if="${param.matchDeclined}" class="alert alert-warning">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Match request declined.
+        </div>
+        <div th:if="${param.availabilityToggled}" class="alert alert-success">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Donor availability status updated.
+        </div>
+
+        <!-- Donor Status Banner Card -->
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; background: #FFF5F5; border-color: #FFC9C9; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="color: var(--brand-primary); margin-bottom: 0.3rem;">Donor Profile & Availability</h3>
+                <p style="color: var(--text-body); margin-bottom: 0; font-size: 0.925rem;">
+                    Blood Group: <strong th:text="${profile.bloodGroup}" style="color: var(--brand-primary); font-size: 1.05rem;">A+</strong> | 
+                    Age: <span th:text="${profile.age}">25</span> | 
+                    Gender: <span th:text="${profile.gender}">Male</span> |
+                    Status: 
+                    <span th:if="${profile.isAvailable}" class="badge badge-accepted">AVAILABLE FOR MATCHING</span>
+                    <span th:if="${!profile.isAvailable}" class="badge badge-declined">UNAVAILABLE</span>
+                </p>
+            </div>
+            <div>
+                <form th:action="@{/donor/toggle-availability}" method="post">
+                    <button type="submit" class="btn btn-outline-dark btn-sm" style="background: #FFFFFF; color: var(--text-heading); border-color: #CED4DA;">
+                        Toggle Availability (<span th:text="${profile.isAvailable ? 'Set Unavailable' : 'Set Available'}">Toggle</span>)
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Section 1: Pending Emergency Matches -->
+        <div class="card">
+            <div class="card-title">
+                <span>🩸 Emergency Matches Pending Your Response</span>
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;" th:text="${#lists.size(donorMatches)} + ' Total Matches Assigned'">0 Matches</span>
+            </div>
+
+            <!-- Empty State -->
+            <div th:if="${#lists.isEmpty(donorMatches)}" class="empty-state">
+                <div class="empty-state-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <h4>No Pending Blood Matches</h4>
+                <p>There are currently no active emergency requests assigned to your blood group (<strong th:text="${profile.bloodGroup}">A+</strong>). Check back soon!</p>
+            </div>
+
+            <!-- Table View -->
+            <div th:if="${!#lists.isEmpty(donorMatches)}" class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Match ID</th>
+                            <th>Blood Group</th>
+                            <th>Units Needed</th>
+                            <th>Urgency</th>
+                            <th>Hospital & Location</th>
+                            <th>Required By</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="m : ${donorMatches}">
+                            <td><strong th:text="'#' + ${m.id}">#1</strong></td>
+                            <td><span class="badge badge-blood" th:text="${m.seekerRequest.bloodGroup}">A+</span></td>
+                            <td><strong th:text="${m.seekerRequest.units} + ' Units'">2 Units</strong></td>
+                            <td>
+                                <span th:if="${m.seekerRequest.urgency.name() == 'CRITICAL'}" class="badge badge-critical">CRITICAL</span>
+                                <span th:if="${m.seekerRequest.urgency.name() == 'HIGH'}" class="badge badge-high">HIGH</span>
+                                <span th:if="${m.seekerRequest.urgency.name() == 'MEDIUM'}" class="badge badge-medium">MEDIUM</span>
+                                <span th:if="${m.seekerRequest.urgency.name() == 'LOW'}" class="badge badge-low">LOW</span>
+                            </td>
+                            <td>
+                                <div style="font-weight: 600;" th:text="${m.seekerRequest.hospitalName}">Hospital Name</div>
+                                <div style="font-size: 0.825rem; color: var(--text-muted);" th:text="${m.seekerRequest.hospitalAddress}">Address</div>
+                            </td>
+                            <td th:text="${#temporals.format(m.seekerRequest.requiredByDate, 'dd MMM yyyy')}">01 Oct 2026</td>
+                            <td>
+                                <span th:if="${m.status.name() == 'PENDING'}" class="badge badge-pending">PENDING</span>
+                                <span th:if="${m.status.name() == 'ACCEPTED'}" class="badge badge-accepted">ACCEPTED</span>
+                                <span th:if="${m.status.name() == 'DECLINED'}" class="badge badge-declined">DECLINED</span>
+                            </td>
+                            <td>
+                                <div th:if="${m.status.name() == 'PENDING'}" style="display: flex; gap: 6px;">
+                                    <form th:action="@{/matches/{id}/accept(id=${m.id})}" method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-success btn-sm">I Can Help</button>
+                                    </form>
+                                    <form th:action="@{/matches/{id}/decline(id=${m.id})}" method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-danger btn-sm">Decline</button>
+                                    </form>
+                                </div>
+                                <div th:if="${m.status.name() == 'ACCEPTED'}">
+                                    <span class="badge badge-accepted">Accepted ✓</span>
+                                </div>
+                                <div th:if="${m.status.name() == 'DECLINED'}">
+                                    <span class="badge badge-declined">Declined ✗</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 2: Accepted Matches & Seeker Contact Details -->
+        <div class="card">
+            <div class="card-title">
+                <span>📞 Accepted Matches & Seeker Contact Details</span>
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Revealed Upon Your Acceptance</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Match ID</th>
+                            <th>Seeker Name</th>
+                            <th>Hospital & Address</th>
+                            <th>Seeker Contact Phone (Disclosed)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="m : ${donorMatches}" th:if="${m.status.name() == 'ACCEPTED'}">
+                            <td><strong th:text="'#' + ${m.id}">#1</strong></td>
+                            <td th:text="${m.seekerRequest.seeker.fullName}">Seeker Name</td>
+                            <td th:text="${m.seekerRequest.hospitalName} + ', ' + ${m.seekerRequest.hospitalAddress}">Hospital Address</td>
+                            <td>
+                                <div class="contact-reveal-card">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                    <span th:text="${m.seekerRequest.seeker.phone}">9876543210</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

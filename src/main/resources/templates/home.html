@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeLink — Emergency Blood Match Platform</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+    <!-- Persistent Navbar -->
+    <nav class="navbar">
+        <a class="navbar-brand" th:href="@{/}">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            Life<span>Link</span>
+        </a>
+        <ul class="navbar-nav">
+            <li><a th:href="@{/login}" class="btn btn-outline-dark btn-sm">Sign In</a></li>
+            <li><a th:href="@{/register}" class="btn btn-primary btn-sm">Get Started</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero Section -->
+    <header style="background: linear-gradient(135deg, var(--brand-dark) 0%, #1A1E24 100%); color: #FFFFFF; padding: 5rem 1.5rem 6rem 1.5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08);">
+        <div style="max-width: 860px; margin: 0 auto;">
+            <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(201, 42, 42, 0.15); border: 1px solid rgba(201, 42, 42, 0.3); color: #FFC9C9; padding: 0.4rem 1rem; border-radius: var(--radius-full); font-size: 0.85rem; font-weight: 600; margin-bottom: 1.5rem;">
+                <span style="width: 8px; height: 8px; background-color: var(--brand-primary); border-radius: 50%; display: inline-block;"></span>
+                Real-Time Emergency Blood Match Platform
+            </div>
+
+            <h1 style="font-size: 3.2rem; color: #FFFFFF; margin-bottom: 1.25rem;">Connecting Urgent Blood Seekers With Nearby Donors</h1>
+            
+            <p style="font-size: 1.2rem; color: #CED4DA; max-width: 720px; margin: 0 auto 2.5rem auto; font-weight: 400; line-height: 1.6;">
+                LifeLink automatically scans for verified, available donors with the exact matching blood group and connects parties with privacy-guarded contact disclosure.
+            </p>
+
+            <div style="display: flex; justify-content: center; gap: 1.25rem; flex-wrap: wrap;">
+                <a th:href="@{/register}" class="btn btn-primary" style="padding: 0.9rem 2.2rem; font-size: 1.05rem;">
+                    Post Blood Request
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+                <a th:href="@{/register}" class="btn btn-secondary" style="padding: 0.9rem 2.2rem; font-size: 1.05rem;">
+                    Become a Donor
+                </a>
+            </div>
+
+            <!-- Stats Bar -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 4.5rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 1.5rem; border-radius: var(--radius-lg);">
+                <div>
+                    <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 700; color: #FFFFFF;">100%</div>
+                    <div style="font-size: 0.85rem; color: #ADB5BD;">Privacy-Guarded Contact Info</div>
+                </div>
+                <div>
+                    <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 700; color: #FFFFFF;">Instant</div>
+                    <div style="font-size: 0.85rem; color: #ADB5BD;">Auto-Matching Engine</div>
+                </div>
+                <div>
+                    <div style="font-family: 'Space Grotesk', sans-serif; font-size: 1.8rem; font-weight: 700; color: #FFFFFF;">Zero</div>
+                    <div style="font-size: 0.85rem; color: #ADB5BD;">Platform Intermediary Fees</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- How It Works Section -->
+    <main class="container">
+        <div style="text-align: center; margin-bottom: 3.5rem; margin-top: 2rem;">
+            <h2 style="font-size: 2.2rem; margin-bottom: 0.5rem;">How LifeLink Works</h2>
+            <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 580px; margin: 0 auto;">
+                A streamlined 3-step system engineered for speed, privacy, and reliability during medical emergencies.
+            </p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.75rem;">
+            
+            <!-- Step 1 Card -->
+            <div class="card" style="margin-bottom: 0;">
+                <div style="width: 48px; height: 48px; background-color: #FFF5F5; color: var(--brand-primary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; margin-bottom: 1.25rem;">
+                    01
+                </div>
+                <h3 style="margin-bottom: 0.65rem;">Register Profile</h3>
+                <p style="color: var(--text-muted); font-size: 0.925rem;">
+                    Register as a Blood Seeker or Blood Donor. Donors specify their blood group (A+, B+, O-, etc.), age, and availability status.
+                </p>
+            </div>
+
+            <!-- Step 2 Card -->
+            <div class="card" style="margin-bottom: 0;">
+                <div style="width: 48px; height: 48px; background-color: #E6FCF5; color: var(--brand-secondary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; margin-bottom: 1.25rem;">
+                    02
+                </div>
+                <h3 style="margin-bottom: 0.65rem;">Post & Auto-Match</h3>
+                <p style="color: var(--text-muted); font-size: 0.925rem;">
+                    Seekers submit emergency requests with units needed, urgency, and hospital location. Our engine instantly notifies matching donors.
+                </p>
+            </div>
+
+            <!-- Step 3 Card -->
+            <div class="card" style="margin-bottom: 0;">
+                <div style="width: 48px; height: 48px; background-color: #EDF2FF; color: #364FC7; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-weight: 700; font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; margin-bottom: 1.25rem;">
+                    03
+                </div>
+                <h3 style="margin-bottom: 0.65rem;">Match & Connect</h3>
+                <p style="color: var(--text-muted); font-size: 0.925rem;">
+                    Donors review matches and click "I Can Help". Phone numbers are securely disclosed only after match acceptance.
+                </p>
+            </div>
+
+        </div>
+
+        <!-- Privacy Guard Banner -->
+        <div style="margin-top: 4rem; background: #FFFFFF; border: 1.5px solid var(--border-color); border-radius: var(--radius-lg); padding: 2.5rem; display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; box-shadow: var(--shadow-sm);">
+            <div style="width: 64px; height: 64px; background-color: #E6FCF5; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--brand-secondary)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div style="flex: 1; min-width: 260px;">
+                <h3 style="margin-bottom: 0.4rem;">Privacy by Design Architecture</h3>
+                <p style="color: var(--text-muted); margin-bottom: 0; font-size: 0.95rem;">
+                    Your personal contact numbers are never published publicly. Phone details are strictly concealed until a matching donor explicitly accepts to help.
+                </p>
+            </div>
+            <div>
+                <a th:href="@{/register}" class="btn btn-outline" style="white-space: nowrap;">Create Free Account</a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div>
+                <div class="footer-brand">
+                    ❤️ LifeLink
+                </div>
+                <p style="font-size: 0.875rem; color: #868E96;">
+                    Empowering communities through rapid, privacy-guarded blood donation matching.
+                </p>
+            </div>
+            <div>
+                <h4 style="color: #FFFFFF; margin-bottom: 1rem; font-size: 0.95rem;">Platform Links</h4>
+                <ul style="list-style: none; display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.9rem;">
+                    <li><a th:href="@{/register}" style="color: #ADB5BD;">Register as Donor</a></li>
+                    <li><a th:href="@{/register}" style="color: #ADB5BD;">Register as Seeker</a></li>
+                    <li><a th:href="@{/login}" style="color: #ADB5BD;">Sign In</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 style="color: #FFFFFF; margin-bottom: 1rem; font-size: 0.95rem;">Security & Standards</h4>
+                <p style="font-size: 0.85rem; color: #868E96;">
+                    Built with Spring Boot 3.x, BCrypt Password Security, and Active CSRF Guard Protection.
+                </p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            © 2026 LifeLink Platform. Built for Production & Placement Showcase.
+        </div>
+    </footer>
+</body>
+</html>

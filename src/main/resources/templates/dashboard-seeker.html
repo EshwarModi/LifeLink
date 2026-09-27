@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seeker Dashboard — LifeLink</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+    <!-- Persistent Navbar -->
+    <nav class="navbar">
+        <a class="navbar-brand" th:href="@{/dashboard}">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            Life<span>Link</span>
+        </a>
+        <ul class="navbar-nav">
+            <li>
+                <div class="user-pill">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <strong th:text="${currentUser.fullName}">Seeker Name</strong> (Seeker)
+                </div>
+            </li>
+            <li>
+                <form th:action="@{/logout}" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-outline-dark btn-sm">Sign Out</button>
+                </form>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        
+        <!-- Feedback Banner Alert -->
+        <div th:if="${param.requestCreated}" class="alert alert-success">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Blood request posted successfully! Auto-matching engine has scanned available donors with exact blood group match.
+        </div>
+
+        <!-- Dashboard Header & CTA -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h2>Seeker Dashboard</h2>
+                <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 0;">Manage your emergency blood requests and view donor match responses</p>
+            </div>
+            <a th:href="@{/requests/new}" class="btn btn-primary" style="padding: 0.8rem 1.4rem;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Post New Blood Request
+            </a>
+        </div>
+
+        <!-- Metric Summary Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-card-title">Total Requests Posted</div>
+                <div class="stat-card-value" th:text="${#lists.size(requests)}">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-title">Total Matches Found</div>
+                <div class="stat-card-value" th:text="${#lists.size(seekerMatches)}">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-title">Privacy Policy</div>
+                <div style="font-size: 0.9rem; color: var(--brand-secondary); font-weight: 600; margin-top: 0.3rem;">
+                    🔒 Contact Info Protected
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 1: My Blood Requests -->
+        <div class="card">
+            <div class="card-title">
+                <span>🩸 My Active Blood Requests</span>
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;" th:text="${#lists.size(requests)} + ' Total Requests'">0 Requests</span>
+            </div>
+
+            <!-- Empty State -->
+            <div th:if="${#lists.isEmpty(requests)}" class="empty-state">
+                <div class="empty-state-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                </div>
+                <h4>No Blood Requests Posted Yet</h4>
+                <p>Submit an emergency request specifying required blood group, units, and hospital address to trigger auto-matching.</p>
+                <a th:href="@{/requests/new}" class="btn btn-primary btn-sm">Post Blood Request Now</a>
+            </div>
+
+            <!-- Table View -->
+            <div th:if="${!#lists.isEmpty(requests)}" class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Blood Group</th>
+                            <th>Units</th>
+                            <th>Urgency</th>
+                            <th>Hospital & Address</th>
+                            <th>Required By</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="req : ${requests}">
+                            <td><strong th:text="'#' + ${req.id}">#1</strong></td>
+                            <td><span class="badge badge-blood" th:text="${req.bloodGroup}">A+</span></td>
+                            <td><strong th:text="${req.units} + ' Units'">2 Units</strong></td>
+                            <td>
+                                <span th:if="${req.urgency.name() == 'CRITICAL'}" class="badge badge-critical">CRITICAL</span>
+                                <span th:if="${req.urgency.name() == 'HIGH'}" class="badge badge-high">HIGH</span>
+                                <span th:if="${req.urgency.name() == 'MEDIUM'}" class="badge badge-medium">MEDIUM</span>
+                                <span th:if="${req.urgency.name() == 'LOW'}" class="badge badge-low">LOW</span>
+                            </td>
+                            <td>
+                                <div style="font-weight: 600;" th:text="${req.hospitalName}">Hospital Name</div>
+                                <div style="font-size: 0.825rem; color: var(--text-muted);" th:text="${req.hospitalAddress}">Address</div>
+                            </td>
+                            <td th:text="${#temporals.format(req.requiredByDate, 'dd MMM yyyy')}">01 Oct 2026</td>
+                            <td>
+                                <span class="badge badge-open" th:text="${req.status}">OPEN</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 2: Donor Match Responses & Contact Disclosures -->
+        <div class="card">
+            <div class="card-title">
+                <span>🤝 Donor Match Responses</span>
+                <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">Privacy Disclosed on Match Accept</span>
+            </div>
+
+            <!-- Empty State -->
+            <div th:if="${#lists.isEmpty(seekerMatches)}" class="empty-state">
+                <div class="empty-state-icon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+                <h4>No Active Donor Matches Yet</h4>
+                <p>When donors matching your required blood group respond to your request, their response status will appear here.</p>
+            </div>
+
+            <!-- Match Table -->
+            <div th:if="${!#lists.isEmpty(seekerMatches)}" class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>For Request</th>
+                            <th>Donor Name</th>
+                            <th>Response Status</th>
+                            <th>Donor Contact Phone (Privacy Disclosed)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="m : ${seekerMatches}">
+                            <td>
+                                <strong>Request #<span th:text="${m.seekerRequest.id}">1</span></strong>
+                                <span class="badge badge-blood" style="margin-left: 6px;" th:text="${m.seekerRequest.bloodGroup}">A+</span>
+                            </td>
+                            <td th:text="${m.donor.fullName}">Donor Name</td>
+                            <td>
+                                <span th:if="${m.status.name() == 'ACCEPTED'}" class="badge badge-accepted">ACCEPTED (I Can Help!)</span>
+                                <span th:if="${m.status.name() == 'PENDING'}" class="badge badge-pending">PENDING RESPONSE</span>
+                                <span th:if="${m.status.name() == 'DECLINED'}" class="badge badge-declined">DECLINED</span>
+                            </td>
+                            <td>
+                                <!-- PRIVACY BY DESIGN: Contact revealed ONLY if contactShared is true -->
+                                <div th:if="${m.contactShared}">
+                                    <div class="contact-reveal-card">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                        <span th:text="${m.donor.phone}">9876543210</span>
+                                    </div>
+                                </div>
+                                <div th:if="${!m.contactShared}">
+                                    <span class="privacy-guarded-badge">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                        Hidden until donor accepts match
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>

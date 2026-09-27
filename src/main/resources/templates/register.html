@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account — LifeLink</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a class="navbar-brand" th:href="@{/}">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            Life<span>Link</span>
+        </a>
+        <ul class="navbar-nav">
+            <li><a th:href="@{/login}">Already Have an Account?</a></li>
+        </ul>
+    </nav>
+
+    <div class="container-narrow" style="max-width: 620px;">
+        <div class="card" style="padding: 2.5rem 2.25rem;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2 style="font-size: 2rem;">Create LifeLink Account</h2>
+                <p style="color: var(--text-muted); font-size: 0.925rem;">Join our privacy-first emergency blood donor & seeker network</p>
+            </div>
+
+            <form th:action="@{/register}" th:object="${registrationForm}" method="post">
+                
+                <!-- Section 1: Basic Info -->
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--brand-secondary); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
+                        1. Personal Details
+                    </h4>
+
+                    <div class="form-group">
+                        <label for="fullName">Full Name</label>
+                        <input type="text" id="fullName" th:field="*{fullName}" class="form-control" placeholder="e.g. John Doe">
+                        <div class="error-text" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" th:field="*{email}" class="form-control" placeholder="john@example.com">
+                        <div class="error-text" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" th:field="*{password}" class="form-control" placeholder="At least 6 characters">
+                            <div class="error-text" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number (10 digits)</label>
+                            <input type="text" id="phone" th:field="*{phone}" class="form-control" placeholder="9876543210">
+                            <div class="error-text" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Account Role -->
+                <div style="margin-bottom: 1.5rem;">
+                    <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--brand-secondary); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.4rem;">
+                        2. Select Platform Role
+                    </h4>
+
+                    <div class="form-group">
+                        <label for="userType">Register As</label>
+                        <select id="userType" th:field="*{userType}" class="form-control" onchange="toggleDonorFields()">
+                            <option value="">-- Select Account Role --</option>
+                            <option value="SEEKER">Blood Seeker (Patient / Hospital Representative)</option>
+                            <option value="DONOR">Blood Donor (Voluntary Donor)</option>
+                        </select>
+                        <div class="error-text" th:if="${#fields.hasErrors('userType')}" th:errors="*{userType}"></div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Donor Specific Parameters -->
+                <div id="donorFields" style="display: none; background: #FFF5F5; border: 1.5px solid #FFC9C9; padding: 1.5rem; border-radius: var(--radius-md); margin-bottom: 1.75rem;">
+                    <h4 style="color: var(--brand-primary); margin-bottom: 1rem; font-size: 0.95rem;">
+                        🩸 Donor Profile Configuration
+                    </h4>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="bloodGroup">Blood Group</label>
+                            <select id="bloodGroup" th:field="*{bloodGroup}" class="form-control">
+                                <option value="">Select Blood Group</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                            </select>
+                            <div class="error-text" th:if="${#fields.hasErrors('bloodGroup')}" th:errors="*{bloodGroup}"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="age">Age (18 - 65)</label>
+                            <input type="number" id="age" th:field="*{age}" class="form-control" min="18" max="65" placeholder="25">
+                            <div class="error-text" th:if="${#fields.hasErrors('age')}" th:errors="*{age}"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="gender">Gender</label>
+                        <select id="gender" th:field="*{gender}" class="form-control">
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <div class="error-text" th:if="${#fields.hasErrors('gender')}" th:errors="*{gender}"></div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" style="padding: 0.9rem; font-size: 1.05rem;">
+                    Complete Registration
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 1.75rem; pt-1rem; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.9rem;">
+                Already registered? <a th:href="@{/login}" style="font-weight: 700;">Sign In Here</a>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+        function toggleDonorFields() {
+            var userTypeSelect = document.getElementById("userType");
+            var donorFieldsDiv = document.getElementById("donorFields");
+            if (userTypeSelect.value === "DONOR") {
+                donorFieldsDiv.style.display = "block";
+            } else {
+                donorFieldsDiv.style.display = "none";
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            toggleDonorFields();
+        });
+    </script>
+</body>
+</html>

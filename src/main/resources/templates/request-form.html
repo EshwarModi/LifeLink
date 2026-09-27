@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Blood Request — LifeLink</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a class="navbar-brand" th:href="@{/dashboard}">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            Life<span>Link</span>
+        </a>
+        <ul class="navbar-nav">
+            <li><a th:href="@{/dashboard}">Dashboard</a></li>
+            <li>
+                <form th:action="@{/logout}" method="post" style="display:inline;">
+                    <button type="submit" class="btn btn-outline-dark btn-sm">Sign Out</button>
+                </form>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="container-narrow" style="max-width: 680px;">
+        <div class="card" style="padding: 2.5rem 2.25rem;">
+            
+            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 1.75rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                <div style="width: 48px; height: 48px; background-color: #FFF5F5; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; color: var(--brand-primary);">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </div>
+                <div>
+                    <h2 style="font-size: 1.6rem; margin-bottom: 0.1rem;">Post Blood Request</h2>
+                    <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 0;">Auto-matching engine will scan available donors with exact blood group</p>
+                </div>
+            </div>
+
+            <form th:action="@{/requests/new}" th:object="${seekerRequestForm}" method="post">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="bloodGroup">Required Blood Group</label>
+                        <select id="bloodGroup" th:field="*{bloodGroup}" class="form-control">
+                            <option value="">Select Blood Group</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                        </select>
+                        <div class="error-text" th:if="${#fields.hasErrors('bloodGroup')}" th:errors="*{bloodGroup}"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="units">Units Needed (1 - 20)</label>
+                        <input type="number" id="units" th:field="*{units}" class="form-control" min="1" max="20" placeholder="2">
+                        <div class="error-text" th:if="${#fields.hasErrors('units')}" th:errors="*{units}"></div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="urgency">Urgency Level</label>
+                        <select id="urgency" th:field="*{urgency}" class="form-control">
+                            <option value="">Select Urgency Level</option>
+                            <option value="LOW">Low (Routine / Planned Surgery)</option>
+                            <option value="MEDIUM">Medium (Required within 48 Hours)</option>
+                            <option value="HIGH">High (Required within 24 Hours)</option>
+                            <option value="CRITICAL">Critical (Immediate Emergency)</option>
+                        </select>
+                        <div class="error-text" th:if="${#fields.hasErrors('urgency')}" th:errors="*{urgency}"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="requiredByDate">Required By Date</label>
+                        <input type="date" id="requiredByDate" th:field="*{requiredByDate}" class="form-control">
+                        <div class="error-text" th:if="${#fields.hasErrors('requiredByDate')}" th:errors="*{requiredByDate}"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="hospitalName">Hospital Name</label>
+                    <input type="text" id="hospitalName" th:field="*{hospitalName}" class="form-control" placeholder="e.g. City General Hospital">
+                    <div class="error-text" th:if="${#fields.hasErrors('hospitalName')}" th:errors="*{hospitalName}"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="hospitalAddress">Hospital Address / City Ward</label>
+                    <textarea id="hospitalAddress" th:field="*{hospitalAddress}" class="form-control" rows="3" placeholder="e.g. Ward 4, ICU Wing, 123 Medical Boulevard, Downtown"></textarea>
+                    <div class="error-text" th:if="${#fields.hasErrors('hospitalAddress')}" th:errors="*{hospitalAddress}"></div>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 2; padding: 0.85rem;">
+                        Post Request & Trigger Auto-Match
+                    </button>
+                    <a th:href="@{/dashboard}" class="btn btn-outline" style="flex: 1;">Cancel</a>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</body>
+</html>
