@@ -6,13 +6,16 @@ os.environ['FLASK_ENV']    = 'testing'
 os.environ['SECRET_KEY']   = 'test-secret-key-for-ci'
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
 
-from app import app as _app, db as _db  # noqa: E402
+from app import app as _app, db as _db, limiter as _limiter  # noqa: E402
 
 
 @pytest.fixture(scope='function')
 def app():
-    _app.config['TESTING']               = True
+    _app.config['TESTING']                 = True
     _app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    _app.config['WTF_CSRF_ENABLED']        = False
+    _app.config['RATELIMIT_ENABLED']       = False
+    _limiter.enabled                       = False
     return _app
 
 

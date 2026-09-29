@@ -6,6 +6,10 @@ import os
 import re
 from dotenv import load_dotenv
 from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_limiter.errors import RateLimitExceeded
 
 load_dotenv()
 
@@ -19,6 +23,22 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+csrf = CSRFProtect(app)
+
+# Note: Uses in-memory storage by default ('memory://').
+# For production deployments with multiple server processes/workers,
+# storage_uri should be configured to use Redis (e.g. storage_uri=os.environ.get('REDIS_URL', 'redis://localhost:6379')).
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=[],
+    storage_uri="memory://"
+)
+
+
+@app.errorhandler(RateLimitExceeded)
+def ratelimit_handler(e):
+    return jsonify({'error': f'Rate limit exceeded. {e.description}'}), 429
 
 FLASK_ENV = os.environ.get('FLASK_ENV', 'development').lower()
 IS_PRODUCTION = FLASK_ENV == 'production'
@@ -44,8 +64,9 @@ def validate_register(data):
         errors.append('Username must be at least 3 characters.')
     if not data.get('email') or not re.match(r'^[^@]+@[^@]+\.[^@]+$', data['email']):
         errors.append('A valid email is required.')
-    if not data.get('password') or len(data['password']) < 6:
-        errors.append('Password must be at least 6 characters.')
+    pwd = data.get('password', '')
+    if not pwd or len(pwd) < 8 or not re.search(r'[A-Z]', pwd) or not re.search(r'[a-z]', pwd) or not re.search(r'\d', pwd):
+        errors.append('Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.')
     if data.get('user_type') not in VALID_USER_TYPES:
         errors.append('Invalid user type.')
     if not data.get('full_name') or len(data['full_name'].strip()) < 2:
@@ -153,7 +174,7 @@ class Match(db.Model):
 def index():
     if 'user_id' in session:
         return redirect(url_for('dashboard'))
-    return redirect(url_for('home'))
+    return render_template('index.html')
 
 
 @app.route('/home')
@@ -166,6 +187,7 @@ def home():
 
 
 @app.route('/register', methods=['GET', 'POST'])
+@limiter.limit("10 per hour", methods=["POST"])
 def register():
     if request.method == 'POST':
         data = request.get_json() if request.is_json else request.form.to_dict()
@@ -202,6 +224,7 @@ def register():
             db.session.add(dp)
             db.session.commit()
 
+        session.clear()
         session['user_id']   = user.id
         session['user_type'] = user.user_type
         return jsonify({'success': True, 'redirect': url_for('dashboard')}), 200
@@ -210,6 +233,7 @@ def register():
 
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("5 per minute", methods=["POST"])
 def login():
     if request.method == 'POST':
         data = request.get_json() if request.is_json else request.form.to_dict()
@@ -218,6 +242,7 @@ def login():
 
         user = User.query.filter_by(username=data['username'].strip()).first()
         if user and check_password_hash(user.password, data['password']):
+            session.clear()
             session['user_id']   = user.id
             session['user_type'] = user.user_type
             return jsonify({'success': True, 'redirect': url_for('dashboard')}), 200

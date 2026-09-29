@@ -34,7 +34,16 @@ def test_register_page(client):
 
 def test_root_redirects(client):
     res = client.get('/')
-    assert res.status_code in (301, 302)
+    assert res.status_code in (200, 301, 302)
+
+
+def test_csrf_protection_rejects_missing_token(client):
+    client.application.config['WTF_CSRF_ENABLED'] = True
+    try:
+        res = client.post('/login', json={'username': 'test', 'password': 'pass'})
+        assert res.status_code == 400
+    finally:
+        client.application.config['WTF_CSRF_ENABLED'] = False
 
 
 # ── Auth flow ────────────────────────────────────────────────────────────────
@@ -43,7 +52,7 @@ def _register_donor(client):
     return client.post('/register', json={
         'username':    'testdonor',
         'email':       'donor@test.com',
-        'password':    'password123',
+        'password':    'Password123',
         'user_type':   'donor',
         'full_name':   'Test Donor',
         'phone':       '9876543210',
@@ -59,7 +68,7 @@ def _register_seeker(client):
     return client.post('/register', json={
         'username':  'testseeker',
         'email':     'seeker@test.com',
-        'password':  'password123',
+        'password':  'Password123',
         'user_type': 'seeker',
         'full_name': 'Test Seeker',
         'phone':     '9876543211',
@@ -94,10 +103,28 @@ def test_login_success(client):
     _register_donor(client)
     # Log out first (registration auto-logs in)
     client.get('/logout')
-    res  = client.post('/login', json={'username': 'testdonor', 'password': 'password123'})
+    res  = client.post('/login', json={'username': 'testdonor', 'password': 'Password123'})
     data = res.get_json()
     assert res.status_code == 200
     assert data['success'] is True
+
+
+def test_register_weak_password_rejected(client):
+    res = client.post('/register', json={
+        'username':    'weakdonor',
+        'email':       'weak@test.com',
+        'password':    'password123',  # missing uppercase
+        'user_type':   'donor',
+        'full_name':   'Weak Donor',
+        'phone':       '9876543210',
+        'city':        'Mumbai',
+        'state':       'Maharashtra',
+        'blood_group': 'A+',
+        'age':         '25',
+        'gender':      'Male',
+    })
+    assert res.status_code == 400
+    assert 'Password must be at least 8 characters long' in res.get_json()['error']
 
 
 def test_login_wrong_password(client):
@@ -184,3 +211,22 @@ def test_seeker_can_create_request(client):
     data = res.get_json()
     assert res.status_code == 200
     assert data['success'] is True
+
+
+def test_rate_limiting_login_returns_429(client):
+    from app import limiter
+    limiter.enabled = True
+    client.application.config['RATELIMIT_ENABLED'] = True
+    try:
+        limiter.reset()
+        for _ in range(5):
+            res = client.post('/login', json={'username': 'test', 'password': 'WrongPassword1'})
+            assert res.status_code == 401
+
+        res6 = client.post('/login', json={'username': 'test', 'password': 'WrongPassword1'})
+        assert res6.status_code == 429
+        data = res6.get_json()
+        assert 'Rate limit exceeded' in data['error']
+    finally:
+        limiter.enabled = False
+        client.application.config['RATELIMIT_ENABLED'] = False

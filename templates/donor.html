@@ -463,7 +463,10 @@
         try {
             const res    = await fetch('/api/donor/respond', {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
                 body:    JSON.stringify({ request_id: requestId })
             });
             const result = await res.json();
@@ -491,7 +494,10 @@
         try {
             const res    = await fetch(`/api/accept-match/${matchId}`, {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
             });
             const result = await res.json();
             if (res.ok) {
@@ -522,7 +528,10 @@
         try {
             const res = await fetch('/api/donor/update-availability', {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
                 body:    JSON.stringify({ available_to_donate: !current })
             });
             if (res.ok) location.reload();

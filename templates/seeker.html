@@ -386,6 +386,7 @@
             <button class="close-btn" onclick="closeModal('createModal')">×</button>
         </div>
         <form id="createForm" onsubmit="submitCreate(event)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="modal-two-col">
                 <div class="form-group">
                     <label>Blood Group *</label>
@@ -437,6 +438,7 @@
             <button class="close-btn" onclick="closeModal('editModal')">×</button>
         </div>
         <form id="editForm" onsubmit="submitEdit(event)">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" id="editRequestId">
             <div class="modal-two-col">
                 <div class="form-group">
@@ -503,7 +505,10 @@
         try {
             const res    = await fetch('{{ url_for("create_request") }}', {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
                 body:    JSON.stringify(data)
             });
             const result = await res.json();
@@ -553,7 +558,10 @@
         try {
             const res    = await fetch(`/seeker/edit-request/${id}`, {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
                 body:    JSON.stringify(data)
             });
             const result = await res.json();
@@ -579,7 +587,10 @@
         try {
             const res    = await fetch(`/seeker/update-request/${id}`, {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
                 body:    JSON.stringify({ status })
             });
             const result = await res.json();

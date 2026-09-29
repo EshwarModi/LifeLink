@@ -4,191 +4,435 @@
 
 {% block extra_styles %}
 <style>
-    .register-container {
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
-    .form-section {
-        background: white;
+    .auth-wrapper {
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
         padding: 2rem;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
+        min-height: 80vh;
     }
 
-    .form-section h3 {
-        color: #dc3545;
-        margin-bottom: 1.5rem;
-        border-bottom: 2px solid #dc3545;
-        padding-bottom: 0.5rem;
+    .auth-card {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 2.5rem;
+        width: 100%;
+        max-width: 580px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.4);
     }
 
-    .donor-fields {
-        display: none;
+    .auth-logo {
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
     }
 
-    .donor-fields.active {
-        display: block;
+    .auth-title {
+        text-align: center;
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 0.4rem;
+        letter-spacing: -0.5px;
     }
 
-    .two-column {
+    .auth-subtitle {
+        text-align: center;
+        color: rgba(255,255,255,0.45);
+        font-size: 0.9rem;
+        margin-bottom: 2rem;
+    }
+
+    /* Override base.html form styles */
+    .auth-card form {
+        background: transparent;
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
+        max-width: 100%;
+        margin: 0;
+    }
+
+    /* Section dividers */
+    .form-section-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 1.75rem 0 1.25rem;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: rgba(255,255,255,0.35);
+    }
+
+    .form-section-title::before,
+    .form-section-title::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(255,255,255,0.08);
+    }
+
+    .form-section-title:first-child {
+        margin-top: 0;
+    }
+
+    /* Role picker */
+    .role-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
     }
 
-    .two-column .form-group {
-        margin-bottom: 1.5rem;
+    .role-card {
+        position: relative;
+        cursor: pointer;
     }
 
-    .text-center {
+    .role-card input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .role-label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1.1rem 1rem;
+        background: rgba(255,255,255,0.05);
+        border: 2px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
         text-align: center;
     }
 
-    .text-center a {
-        color: #dc3545;
-        text-decoration: none;
+    .role-label .role-icon { font-size: 1.6rem; }
+    .role-label .role-name {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: rgba(255,255,255,0.8);
+    }
+    .role-label .role-desc {
+        font-size: 0.75rem;
+        color: rgba(255,255,255,0.4);
+        line-height: 1.4;
     }
 
-    .text-center a:hover {
+    .role-card input[type="radio"]:checked + .role-label {
+        border-color: #dc3545;
+        background: rgba(220,53,69,0.12);
+    }
+
+    .role-card input[type="radio"]:checked + .role-label .role-name {
+        color: #ff6b7a;
+    }
+
+    .role-label:hover {
+        border-color: rgba(220,53,69,0.4);
+        background: rgba(220,53,69,0.07);
+    }
+
+    /* Form fields */
+    .auth-card .form-group {
+        margin-bottom: 1.1rem;
+    }
+
+    .auth-card label {
+        display: block;
+        margin-bottom: 0.4rem;
+        font-size: 0.83rem;
+        font-weight: 600;
+        color: rgba(255,255,255,0.7);
+        letter-spacing: 0.02em;
+    }
+
+    .auth-card input,
+    .auth-card select {
+        width: 100%;
+        padding: 0.72rem 1rem;
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 10px;
+        font-size: 0.93rem;
+        color: #fff;
+        font-family: inherit;
+        transition: border-color 0.2s, background 0.2s;
+        appearance: none;
+        -webkit-appearance: none;
+    }
+
+    .auth-card input::placeholder {
+        color: rgba(255,255,255,0.22);
+    }
+
+    .auth-card input:focus,
+    .auth-card select:focus {
+        outline: none;
+        border-color: #dc3545;
+        background: rgba(220,53,69,0.08);
+        box-shadow: 0 0 0 3px rgba(220,53,69,0.15);
+    }
+
+    /* Select arrow */
+    .select-wrap {
+        position: relative;
+    }
+
+    .select-wrap::after {
+        content: '▾';
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255,255,255,0.4);
+        pointer-events: none;
+        font-size: 0.85rem;
+    }
+
+    .auth-card select option {
+        background: #1a1a1a;
+        color: #fff;
+    }
+
+    .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    /* Donor section */
+    .donor-section {
+        display: none;
+    }
+
+    .donor-section.active {
+        display: block;
+    }
+
+    /* Submit */
+    .btn-auth {
+        width: 100%;
+        padding: 0.9rem;
+        background: linear-gradient(135deg, #dc3545, #ff4d6d);
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 4px 20px rgba(220,53,69,0.35);
+        margin-top: 1.25rem;
+    }
+
+    .btn-auth:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 28px rgba(220,53,69,0.5);
+    }
+
+    .btn-auth:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.5rem;
+        font-size: 0.88rem;
+        color: rgba(255,255,255,0.45);
+    }
+
+    .auth-footer a {
+        color: #ff6b7a;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .auth-footer a:hover {
         text-decoration: underline;
     }
+
+    .error-msg {
+        background: rgba(220,53,69,0.15);
+        border: 1px solid rgba(220,53,69,0.35);
+        color: #ff6b7a;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        font-size: 0.88rem;
+        margin-bottom: 1rem;
+        display: none;
+    }
+
+    .error-msg.visible {
+        display: block;
+    }
+
+    /* Required star */
+    .req { color: #ff4d6d; margin-left: 2px; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="register-container">
-    <h1 style="text-align: center; margin-bottom: 2rem; color: #dc3545;">Join LifeLink</h1>
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-logo">🩸</div>
+        <h1 class="auth-title">Join LifeLink</h1>
+        <p class="auth-subtitle">Create your account and start saving lives</p>
 
-    <form id="registerForm">
-        <div class="form-section">
-            <h3>Choose Your Role</h3>
-            <div class="two-column">
+        <div class="error-msg" id="errorMsg"></div>
+
+        <form id="registerForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <!-- Role -->
+            <div class="form-section-title">Choose your role</div>
+            <div class="role-grid">
+                <label class="role-card">
+                    <input type="radio" name="user_type" value="donor" checked>
+                    <span class="role-label">
+                        <span class="role-icon">💉</span>
+                        <span class="role-name">Donor</span>
+                        <span class="role-desc">I want to donate blood</span>
+                    </span>
+                </label>
+                <label class="role-card">
+                    <input type="radio" name="user_type" value="seeker">
+                    <span class="role-label">
+                        <span class="role-icon">🏥</span>
+                        <span class="role-name">Seeker</span>
+                        <span class="role-desc">I need blood</span>
+                    </span>
+                </label>
+            </div>
+
+            <!-- Personal Info -->
+            <div class="form-section-title">Personal information</div>
+
+            <div class="form-group">
+                <label for="full_name">Full Name <span class="req">*</span></label>
+                <input type="text" id="full_name" name="full_name" placeholder="e.g. Rahul Sharma" required autocomplete="name">
+            </div>
+
+            <div class="two-col">
                 <div class="form-group">
-                    <label>
-                        <input type="radio" name="user_type" value="donor" checked> I want to donate blood
-                    </label>
+                    <label for="username">Username <span class="req">*</span></label>
+                    <input type="text" id="username" name="username" placeholder="Choose a username" required autocomplete="username">
                 </div>
                 <div class="form-group">
-                    <label>
-                        <input type="radio" name="user_type" value="seeker"> I need blood
-                    </label>
+                    <label for="email">Email <span class="req">*</span></label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
                 </div>
             </div>
+
+            <div class="form-group">
+                <label for="password">Password <span class="req">*</span></label>
+                <input type="password" id="password" name="password" placeholder="Create a strong password" required autocomplete="new-password">
+                <small style="display: block; margin-top: 0.35rem; font-size: 0.78rem; color: rgba(255,255,255,0.45);">Must be at least 8 characters with uppercase, lowercase, and a number.</small>
+            </div>
+
+            <div class="form-group">
+                <label for="phone">Phone Number <span class="req">*</span></label>
+                <input type="tel" id="phone" name="phone" placeholder="e.g. 9876543210" required autocomplete="tel">
+            </div>
+
+            <div class="two-col">
+                <div class="form-group">
+                    <label for="city">City <span class="req">*</span></label>
+                    <input type="text" id="city" name="city" placeholder="Your city" required>
+                </div>
+                <div class="form-group">
+                    <label for="state">State <span class="req">*</span></label>
+                    <input type="text" id="state" name="state" placeholder="Your state" required>
+                </div>
+            </div>
+
+            <!-- Donor Info -->
+            <div class="donor-section active" id="donorSection">
+                <div class="form-section-title">Donor details</div>
+
+                <div class="form-group">
+                    <label for="blood_group">Blood Group <span class="req">*</span></label>
+                    <div class="select-wrap">
+                        <select id="blood_group" name="blood_group">
+                            <option value="">Select your blood group</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="two-col">
+                    <div class="form-group">
+                        <label for="age">Age <span class="req">*</span></label>
+                        <input type="number" id="age" name="age" min="18" max="65" placeholder="18 – 65">
+                    </div>
+                    <div class="form-group">
+                        <label for="gender">Gender <span class="req">*</span></label>
+                        <div class="select-wrap">
+                            <select id="gender" name="gender">
+                                <option value="">Select gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-auth" id="submitBtn">Create Account</button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account? <a href="{{ url_for('login') }}">Sign in</a>
         </div>
-
-        <div class="form-section">
-            <h3>Personal Information</h3>
-            
-            <div class="form-group">
-                <label for="full_name">Full Name *</label>
-                <input type="text" id="full_name" name="full_name" required>
-            </div>
-
-            <div class="form-group">
-                <label for="username">Username *</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-
-            <div class="form-group">
-                <label for="email">Email *</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-
-            <div class="form-group">
-                <label for="password">Password *</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-
-            <div class="form-group">
-                <label for="phone">Phone Number *</label>
-                <input type="tel" id="phone" name="phone" required>
-            </div>
-
-            <div class="two-column">
-                <div class="form-group">
-                    <label for="city">City *</label>
-                    <input type="text" id="city" name="city" required>
-                </div>
-                <div class="form-group">
-                    <label for="state">State *</label>
-                    <input type="text" id="state" name="state" required>
-                </div>
-            </div>
-        </div>
-
-        <div class="form-section donor-fields active" id="donorFields">
-            <h3>Donor Information</h3>
-
-            <div class="form-group">
-                <label for="blood_group">Blood Group *</label>
-                <select id="blood_group" name="blood_group">
-                    <option value="">Select your blood group</option>
-                    <option value="A+">A+</option>
-                    <option value="A-">A-</option>
-                    <option value="B+">B+</option>
-                    <option value="B-">B-</option>
-                    <option value="O+">O+</option>
-                    <option value="O-">O-</option>
-                    <option value="AB+">AB+</option>
-                    <option value="AB-">AB-</option>
-                </select>
-            </div>
-
-            <div class="two-column">
-                <div class="form-group">
-                    <label for="age">Age *</label>
-                    <input type="number" id="age" name="age" min="18" max="65">
-                </div>
-                <div class="form-group">
-                    <label for="gender">Gender *</label>
-                    <select id="gender" name="gender">
-                        <option value="">Select gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <button type="submit" class="btn btn-primary" style="width: 100%;">Create Account</button>
-        </div>
-
-        <div class="text-center">
-            Already have an account? <a href="{{ url_for('login') }}">Login here</a>
-        </div>
-    </form>
+    </div>
 </div>
 
 <script>
     const registerForm = document.getElementById('registerForm');
-    const userTypeRadios = document.querySelectorAll('input[name="user_type"]');
-    const donorFields = document.getElementById('donorFields');
+    const donorSection = document.getElementById('donorSection');
     const bloodGroupInput = document.getElementById('blood_group');
     const ageInput = document.getElementById('age');
     const genderInput = document.getElementById('gender');
+    const errorMsg = document.getElementById('errorMsg');
+    const submitBtn = document.getElementById('submitBtn');
 
-    userTypeRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            if (this.value === 'donor') {
-                donorFields.classList.add('active');
-                bloodGroupInput.required = true;
-                ageInput.required = true;
-                genderInput.required = true;
-            } else {
-                donorFields.classList.remove('active');
-                bloodGroupInput.required = false;
-                ageInput.required = false;
-                genderInput.required = false;
-            }
+    // Role toggle
+    document.querySelectorAll('input[name="user_type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            const isDonor = this.value === 'donor';
+            donorSection.classList.toggle('active', isDonor);
+            bloodGroupInput.required = isDonor;
+            ageInput.required = isDonor;
+            genderInput.required = isDonor;
         });
     });
 
-    registerForm.addEventListener('submit', async function(e) {
+    // Set initial required state
+    bloodGroupInput.required = true;
+    ageInput.required = true;
+    genderInput.required = true;
+
+    registerForm.addEventListener('submit', async function (e) {
         e.preventDefault();
+        errorMsg.classList.remove('visible');
+        submitBtn.textContent = 'Creating account…';
+        submitBtn.disabled = true;
 
         const formData = new FormData(this);
         const data = {
@@ -212,7 +456,8 @@
             const response = await fetch('{{ url_for("register") }}', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
                 },
                 body: JSON.stringify(data)
             });
@@ -222,11 +467,16 @@
             if (response.ok) {
                 window.location.href = result.redirect;
             } else {
-                alert(result.error);
+                errorMsg.textContent = result.error || 'Registration failed. Please try again.';
+                errorMsg.classList.add('visible');
+                submitBtn.textContent = 'Create Account';
+                submitBtn.disabled = false;
             }
         } catch (error) {
-            console.error('Error:', error);
-            alert('An error occurred. Please try again.');
+            errorMsg.textContent = 'Network error. Please try again.';
+            errorMsg.classList.add('visible');
+            submitBtn.textContent = 'Create Account';
+            submitBtn.disabled = false;
         }
     });
 </script>
