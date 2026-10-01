@@ -230,3 +230,29 @@ def test_rate_limiting_login_returns_429(client):
     finally:
         limiter.enabled = False
         client.application.config['RATELIMIT_ENABLED'] = False
+
+
+def test_edit_request_rejects_past_date(client):
+    _register_seeker(client)
+    res = client.post('/seeker/create-request', json={
+        'blood_group':      'O+',
+        'units_needed':     2,
+        'urgency':          'urgent',
+        'reason':           'Emergency surgery',
+        'hospital_name':    'City Hospital',
+        'hospital_address': '123 Main St, Mumbai',
+        'required_by':      '2030-06-01T10:00'
+    })
+    req_id = res.get_json()['request_id']
+
+    edit_res = client.post(f'/seeker/edit-request/{req_id}', json={
+        'blood_group':      'O+',
+        'units_needed':     2,
+        'urgency':          'urgent',
+        'reason':           'Updated surgery details',
+        'hospital_name':    'City Hospital',
+        'hospital_address': '123 Main St, Mumbai',
+        'required_by':      '2000-01-01T10:00'
+    })
+    assert edit_res.status_code == 400
+    assert edit_res.get_json()['error'] == 'Required by date must be in the future'

@@ -383,6 +383,9 @@ def edit_request(request_id):
     except (ValueError, TypeError):
         return jsonify({'error': 'Invalid date format'}), 400
 
+    if required_by <= datetime.utcnow():
+        return jsonify({'error': 'Required by date must be in the future'}), 400
+
     sr.blood_group      = data['blood_group']
     sr.units_needed     = int(data['units_needed'])
     sr.urgency          = data['urgency']
