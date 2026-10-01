@@ -461,13 +461,12 @@
         btn.disabled    = true;
         btn.textContent = 'Submitting…';
         try {
-            const res    = await fetch('/api/donor/respond', {
+            const res    = await fetch(`/api/accept-match/${requestId}`, {
                 method:  'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
-                },
-                body:    JSON.stringify({ request_id: requestId })
+                }
             });
             const result = await res.json();
             if (res.ok) {

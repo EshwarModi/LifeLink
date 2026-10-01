@@ -256,3 +256,30 @@ def test_edit_request_rejects_past_date(client):
     })
     assert edit_res.status_code == 400
     assert edit_res.get_json()['error'] == 'Required by date must be in the future'
+
+
+def test_accept_match_canonical_endpoint(client):
+    _register_donor(client)
+    client.get('/logout')
+    _register_seeker(client)
+
+    res = client.post('/seeker/create-request', json={
+        'blood_group':      'O+',
+        'units_needed':     2,
+        'urgency':          'urgent',
+        'reason':           'Emergency surgery',
+        'hospital_name':    'City Hospital',
+        'hospital_address': '123 Main St, Mumbai',
+        'required_by':      '2030-06-01T10:00'
+    })
+    req_id = res.get_json()['request_id']
+    client.get('/logout')
+
+    client.post('/login', json={'username': 'testdonor', 'password': 'Password123'})
+    accept_res = client.post(f'/api/accept-match/{req_id}')
+    assert accept_res.status_code == 200
+    data = accept_res.get_json()
+    assert data['success'] is True
+    assert 'seeker_phone' in data
+    assert 'seeker_name' in data
+    assert 'hospital' in data

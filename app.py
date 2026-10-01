@@ -426,59 +426,43 @@ def find_requests():
     } for r in open_requests])
 
 
-@app.route('/api/donor/respond', methods=['POST'])
-def donor_respond():
-    """Donor clicks 'I Can Help' on a request — creates or updates a match record."""
+@app.route('/api/accept-match/<int:target_id>', methods=['POST'])
+def accept_match(target_id):
     if 'user_id' not in session or session['user_type'] != 'donor':
         return jsonify({'error': 'Unauthorized'}), 401
 
-    data       = request.get_json()
-    request_id = data.get('request_id') if data else None
-    if not request_id:
-        return jsonify({'error': 'request_id is required'}), 400
+    donor_user_id = session['user_id']
 
-    sr = db.session.get(SeekerRequest, request_id)
-    if not sr or sr.status != 'open':
-        return jsonify({'error': 'Request not found or no longer open'}), 404
+    # 1. Check if target_id corresponds to an existing Match record owned by this donor
+    match = Match.query.filter_by(id=target_id, donor_id=donor_user_id).first()
 
-    # Check donor blood group matches
-    dp = DonorProfile.query.filter_by(user_id=session['user_id']).first()
-    if not dp or dp.blood_group != sr.blood_group:
-        return jsonify({'error': 'Blood group mismatch'}), 400
-
-    # Upsert match record
-    match = Match.query.filter_by(request_id=request_id, donor_id=session['user_id']).first()
+    # 2. If no Match row exists by match_id, check if target_id refers to an open SeekerRequest
     if not match:
-        match = Match(request_id=request_id, donor_id=session['user_id'])
-        db.session.add(match)
+        sr = db.session.get(SeekerRequest, target_id)
+        if not sr or sr.status != 'open':
+            return jsonify({'error': 'Request or match not found'}), 404
+
+        dp = DonorProfile.query.filter_by(user_id=donor_user_id).first()
+        if not dp or dp.blood_group != sr.blood_group:
+            return jsonify({'error': 'Blood group mismatch'}), 400
+
+        match = Match.query.filter_by(request_id=sr.id, donor_id=donor_user_id).first()
+        if not match:
+            match = Match(request_id=sr.id, donor_id=donor_user_id)
+            db.session.add(match)
 
     match.status         = 'accepted'
     match.contact_shared = True
     db.session.commit()
 
-    # Return seeker contact now that donor has accepted
+    sr = match.request
     return jsonify({
-        'success':    True,
-        'match_id':   match.id,
+        'success':      True,
+        'match_id':     match.id,
         'seeker_name':  sr.user.full_name,
         'seeker_phone': sr.user.phone,
         'hospital':     sr.hospital_name
     }), 200
-
-
-@app.route('/api/accept-match/<int:match_id>', methods=['POST'])
-def accept_match(match_id):
-    if 'user_id' not in session or session['user_type'] != 'donor':
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    match = db.session.get(Match, match_id)
-    if not match or match.donor_id != session['user_id']:
-        return jsonify({'error': 'Not found'}), 404
-
-    match.contact_shared = True
-    match.status         = 'accepted'
-    db.session.commit()
-    return jsonify({'success': True, 'seeker_phone': match.request.user.phone})
 
 
 @app.route('/api/donor/update-availability', methods=['POST'])
