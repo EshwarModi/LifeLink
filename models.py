@@ -33,7 +33,7 @@ class SeekerRequest(db.Model):
     user_id          = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     blood_group      = db.Column(db.String(5), nullable=False)
     units_needed     = db.Column(db.Integer, nullable=False)
-    urgency          = db.Column(db.Enum('urgent', 'normal', name='urgency_enum'), nullable=False)
+    urgency          = db.Column(db.Enum('low', 'medium', 'high', 'critical', name='urgency_enum'), nullable=False)
     reason           = db.Column(db.Text, nullable=False)
     hospital_name    = db.Column(db.String(120), nullable=False)
     hospital_address = db.Column(db.Text, nullable=False)

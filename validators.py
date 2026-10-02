@@ -1,7 +1,7 @@
 import re
 
 VALID_BLOOD_GROUPS = {'A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'}
-VALID_URGENCY     = {'urgent', 'normal'}
+VALID_URGENCY     = {'low', 'medium', 'high', 'critical'}
 VALID_USER_TYPES  = {'donor', 'seeker'}
 VALID_GENDERS     = {'Male', 'Female', 'Other'}
 

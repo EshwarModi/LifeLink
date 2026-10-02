@@ -4,15 +4,25 @@ from models import User, DonorProfile, SeekerRequest
 from validators import VALID_BLOOD_GROUPS
 
 
+from sqlalchemy import case
+
 def get_requests_for_donor(donor_user_id):
     dp = DonorProfile.query.filter_by(user_id=donor_user_id).first()
     if not dp:
         return {'error': 'Donor profile not found'}, 404
 
+    urgency_priority = case(
+        (SeekerRequest.urgency == 'critical', 1),
+        (SeekerRequest.urgency == 'high', 2),
+        (SeekerRequest.urgency == 'medium', 3),
+        (SeekerRequest.urgency == 'low', 4),
+        else_=5
+    )
+
     open_requests = SeekerRequest.query.filter(
         SeekerRequest.blood_group == dp.blood_group,
         SeekerRequest.status == 'open'
-    ).order_by(SeekerRequest.urgency.desc(), SeekerRequest.required_by.asc()).all()
+    ).order_by(urgency_priority.asc(), SeekerRequest.required_by.asc()).all()
 
     data = [{
         'id':            r.id,

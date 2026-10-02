@@ -189,7 +189,7 @@ def test_register_underage_donor(client):
 
 def test_create_request_requires_auth(client):
     res = client.post('/seeker/create-request', json={
-        'blood_group': 'O+', 'units_needed': 2, 'urgency': 'urgent',
+        'blood_group': 'O+', 'units_needed': 2, 'urgency': 'high',
         'reason': 'Surgery', 'hospital_name': 'City Hospital',
         'hospital_address': '123 Main St',
         'required_by': '2030-01-01T10:00'
@@ -202,7 +202,7 @@ def test_seeker_can_create_request(client):
     res  = client.post('/seeker/create-request', json={
         'blood_group':      'O+',
         'units_needed':     2,
-        'urgency':          'urgent',
+        'urgency':          'high',
         'reason':           'Emergency surgery',
         'hospital_name':    'City Hospital',
         'hospital_address': '123 Main St, Mumbai',
@@ -237,7 +237,7 @@ def test_edit_request_rejects_past_date(client):
     res = client.post('/seeker/create-request', json={
         'blood_group':      'O+',
         'units_needed':     2,
-        'urgency':          'urgent',
+        'urgency':          'high',
         'reason':           'Emergency surgery',
         'hospital_name':    'City Hospital',
         'hospital_address': '123 Main St, Mumbai',
@@ -248,7 +248,7 @@ def test_edit_request_rejects_past_date(client):
     edit_res = client.post(f'/seeker/edit-request/{req_id}', json={
         'blood_group':      'O+',
         'units_needed':     2,
-        'urgency':          'urgent',
+        'urgency':          'high',
         'reason':           'Updated surgery details',
         'hospital_name':    'City Hospital',
         'hospital_address': '123 Main St, Mumbai',
@@ -266,7 +266,7 @@ def test_accept_match_canonical_endpoint(client):
     res = client.post('/seeker/create-request', json={
         'blood_group':      'O+',
         'units_needed':     2,
-        'urgency':          'urgent',
+        'urgency':          'critical',
         'reason':           'Emergency surgery',
         'hospital_name':    'City Hospital',
         'hospital_address': '123 Main St, Mumbai',
@@ -283,3 +283,30 @@ def test_accept_match_canonical_endpoint(client):
     assert 'seeker_phone' in data
     assert 'seeker_name' in data
     assert 'hospital' in data
+
+
+def test_find_requests_orders_by_urgency_priority(client):
+    _register_donor(client)
+    client.get('/logout')
+    _register_seeker(client)
+
+    # Create requests with different urgency levels
+    for urgency in ['low', 'critical', 'medium', 'high']:
+        client.post('/seeker/create-request', json={
+            'blood_group':      'O+',
+            'units_needed':     1,
+            'urgency':          urgency,
+            'reason':           f'Need blood for {urgency}',
+            'hospital_name':    'City Hospital',
+            'hospital_address': '123 Main St',
+            'required_by':      '2030-12-31T10:00'
+        })
+    client.get('/logout')
+
+    client.post('/login', json={'username': 'testdonor', 'password': 'Password123'})
+    res = client.get('/api/find-requests')
+    assert res.status_code == 200
+    requests = res.get_json()
+    urgencies = [r['urgency'] for r in requests]
+    assert urgencies == ['critical', 'high', 'medium', 'low']
+
