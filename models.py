@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from extensions import db
 
 
@@ -16,6 +16,8 @@ class User(db.Model):
 
 
 class DonorProfile(db.Model):
+    MIN_DONATION_INTERVAL_DAYS = 90
+
     id                 = db.Column(db.Integer, primary_key=True)
     user_id            = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     blood_group        = db.Column(db.String(5), nullable=False)
@@ -26,6 +28,22 @@ class DonorProfile(db.Model):
     medical_conditions = db.Column(db.Text)
     updated_at         = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user               = db.relationship('User', backref='donor_profile')
+
+    @property
+    def is_eligible_to_donate(self):
+        if not self.available_to_donate:
+            return False
+        if not self.last_donation_date:
+            return True
+        cutoff = datetime.utcnow() - timedelta(days=self.MIN_DONATION_INTERVAL_DAYS)
+        return self.last_donation_date <= cutoff
+
+    @property
+    def next_eligible_date(self):
+        if not self.last_donation_date:
+            return None
+        return self.last_donation_date + timedelta(days=self.MIN_DONATION_INTERVAL_DAYS)
+
 
 
 class SeekerRequest(db.Model):

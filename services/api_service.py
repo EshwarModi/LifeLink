@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from extensions import db
 from models import User, DonorProfile, SeekerRequest
 from validators import VALID_BLOOD_GROUPS
@@ -66,7 +66,17 @@ def find_donors(blood_group, city):
     if blood_group not in VALID_BLOOD_GROUPS:
         return {'error': 'Invalid blood group'}, 400
 
-    q = DonorProfile.query.filter_by(blood_group=blood_group, available_to_donate=True)
+    cutoff = datetime.utcnow() - timedelta(days=DonorProfile.MIN_DONATION_INTERVAL_DAYS)
+    eligible_filter = db.or_(
+        DonorProfile.last_donation_date.is_(None),
+        DonorProfile.last_donation_date <= cutoff
+    )
+
+    q = DonorProfile.query.filter(
+        DonorProfile.blood_group == blood_group,
+        DonorProfile.available_to_donate.is_(True),
+        eligible_filter
+    )
     if city:
         q = q.join(User).filter(User.city.ilike(f'%{city}%'))
 

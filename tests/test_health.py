@@ -365,3 +365,53 @@ def test_auto_match_cascading_tiers(app, db):
         assert matched_tier1[0].user_id == d1_u.id
 
 
+def test_donor_eligibility_interval(app, db):
+    from models import User, DonorProfile, SeekerRequest
+    from services.matching_service import auto_match_request
+    from services.api_service import find_donors
+
+    with app.app_context():
+        # Seeker
+        seeker = User(username='seeker_elg', email='seeker_elg@test.com', password='hash', user_type='seeker', full_name='Seeker Elg', phone='1234567890', city='Mumbai', state='Maharashtra')
+        db.session.add(seeker)
+        db.session.commit()
+
+        sr = SeekerRequest(user_id=seeker.id, blood_group='O+', units_needed=1, urgency='high', reason='Surgery', hospital_name='Hosp', hospital_address='Addr', required_by=datetime.utcnow() + timedelta(days=1))
+        db.session.add(sr)
+        db.session.commit()
+
+        # Ineligible Donor (donated 10 days ago)
+        recent_donor_u = User(username='recent_donor', email='recent@test.com', password='hash', user_type='donor', full_name='Recent Donor', phone='2223334444', city='Mumbai', state='Maharashtra')
+        db.session.add(recent_donor_u)
+        db.session.commit()
+        recent_donor_p = DonorProfile(user_id=recent_donor_u.id, blood_group='O+', age=30, gender='Male', available_to_donate=True, last_donation_date=datetime.utcnow() - timedelta(days=10))
+        db.session.add(recent_donor_p)
+
+        # Eligible Donor (donated 100 days ago)
+        old_donor_u = User(username='old_donor', email='old@test.com', password='hash', user_type='donor', full_name='Old Donor', phone='5556667777', city='Mumbai', state='Maharashtra')
+        db.session.add(old_donor_u)
+        db.session.commit()
+        old_donor_p = DonorProfile(user_id=old_donor_u.id, blood_group='O+', age=32, gender='Female', available_to_donate=True, last_donation_date=datetime.utcnow() - timedelta(days=100))
+        db.session.add(old_donor_p)
+        db.session.commit()
+
+        # Test DonorProfile properties
+        assert recent_donor_p.is_eligible_to_donate is False
+        assert recent_donor_p.next_eligible_date is not None
+        assert old_donor_p.is_eligible_to_donate is True
+
+        # Test auto-match excludes ineligible donor
+        matched = auto_match_request(sr)
+        matched_donor_user_ids = [m.user_id for m in matched]
+        assert old_donor_u.id in matched_donor_user_ids
+        assert recent_donor_u.id not in matched_donor_user_ids
+
+        # Test find_donors API service excludes ineligible donor
+        donors_list, status = find_donors('O+', 'Mumbai')
+        assert status == 200
+        donor_ids_in_list = [d['id'] for d in donors_list]
+        assert old_donor_p.id in donor_ids_in_list
+        assert recent_donor_p.id not in donor_ids_in_list
+
+
+

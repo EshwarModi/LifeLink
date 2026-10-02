@@ -1,12 +1,13 @@
+from datetime import datetime, timedelta
 from models import db, User, DonorProfile, SeekerRequest, Match
 
 
 def auto_match_request(seeker_request, threshold=3):
     """
     3-Tier Cascading Donor Matching Algorithm:
-    1. Tier 1 (City): Primary search matches available donors with the exact blood group in the seeker's city.
-    2. Tier 2 (State): Secondary fallback if < threshold donors found, expanding to donors in the same state.
-    3. Tier 3 (Nationwide): Final fallback if still < threshold donors found, matching all available compatible donors nationwide.
+    1. Tier 1 (City): Primary search matches available & eligible donors with the exact blood group in the seeker's city.
+    2. Tier 2 (State): Secondary fallback if < threshold donors found, expanding to available & eligible donors in the same state.
+    3. Tier 3 (Nationwide): Final fallback if still < threshold donors found, matching all available & eligible compatible donors nationwide.
     """
     seeker_user = seeker_request.user
     if not seeker_user:
@@ -18,11 +19,18 @@ def auto_match_request(seeker_request, threshold=3):
     matched_donors    = []
     matched_donor_ids = set()
 
+    cutoff = datetime.utcnow() - timedelta(days=DonorProfile.MIN_DONATION_INTERVAL_DAYS)
+    eligible_filter = db.or_(
+        DonorProfile.last_donation_date.is_(None),
+        DonorProfile.last_donation_date <= cutoff
+    )
+
     # Tier 1: Same Blood Group + Same City
     if seeker_city:
-        city_donors = DonorProfile.query.filter_by(
-            blood_group=seeker_request.blood_group,
-            available_to_donate=True
+        city_donors = DonorProfile.query.filter(
+            DonorProfile.blood_group == seeker_request.blood_group,
+            DonorProfile.available_to_donate.is_(True),
+            eligible_filter
         ).join(User).filter(
             User.id != seeker_request.user_id,
             User.city.ilike(seeker_city)
@@ -35,9 +43,10 @@ def auto_match_request(seeker_request, threshold=3):
 
     # Tier 2: Same Blood Group + Same State
     if len(matched_donors) < threshold and seeker_state:
-        state_donors = DonorProfile.query.filter_by(
-            blood_group=seeker_request.blood_group,
-            available_to_donate=True
+        state_donors = DonorProfile.query.filter(
+            DonorProfile.blood_group == seeker_request.blood_group,
+            DonorProfile.available_to_donate.is_(True),
+            eligible_filter
         ).join(User).filter(
             User.id != seeker_request.user_id,
             User.state.ilike(seeker_state)
@@ -50,9 +59,10 @@ def auto_match_request(seeker_request, threshold=3):
 
     # Tier 3: Same Blood Group Nationwide
     if len(matched_donors) < threshold:
-        nationwide_donors = DonorProfile.query.filter_by(
-            blood_group=seeker_request.blood_group,
-            available_to_donate=True
+        nationwide_donors = DonorProfile.query.filter(
+            DonorProfile.blood_group == seeker_request.blood_group,
+            DonorProfile.available_to_donate.is_(True),
+            eligible_filter
         ).join(User).filter(
             User.id != seeker_request.user_id
         ).all()
@@ -85,6 +95,9 @@ def process_accept_match(donor_user_id, target_id):
         dp = DonorProfile.query.filter_by(user_id=donor_user_id).first()
         if not dp or dp.blood_group != sr.blood_group:
             return {'error': 'Blood group mismatch'}, 400
+
+        if not dp.is_eligible_to_donate:
+            return {'error': 'You are not currently eligible to donate blood (minimum 90 days required between donations).'}, 400
 
         match = Match.query.filter_by(request_id=sr.id, donor_id=donor_user_id).first()
         if not match:

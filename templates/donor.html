@@ -325,14 +325,19 @@
                 <div><strong>Gender</strong>{{ donor_profile.gender }}</div>
                 <div>
                     <strong>Status</strong>
-                    {% if donor_profile.available_to_donate %}
+                    {% if donor_profile.is_eligible_to_donate %}
                     <span class="status-pill status-available">● Available</span>
-                    {% else %}
+                    {% elif not donor_profile.available_to_donate %}
                     <span class="status-pill status-unavailable">● Unavailable</span>
+                    {% else %}
+                    <span class="status-pill status-ineligible" style="background: rgba(253,126,20,0.15); color: #fd7e14; border: 1px solid rgba(253,126,20,0.3);">● Ineligible</span>
                     {% endif %}
                 </div>
                 {% if donor_profile.last_donation_date %}
                 <div><strong>Last Donation</strong>{{ donor_profile.last_donation_date.strftime('%d %b %Y') }}</div>
+                {% endif %}
+                {% if not donor_profile.is_eligible_to_donate and donor_profile.next_eligible_date %}
+                <div><strong>Next Eligible</strong><span style="color:#fd7e14; font-weight:700;">{{ donor_profile.next_eligible_date.strftime('%d %b %Y') }}</span></div>
                 {% endif %}
             </div>
         </div>
@@ -346,6 +351,12 @@
     <!-- Main -->
     <div class="main-content">
         <h2>Blood Requests</h2>
+
+        {% if donor_profile and not donor_profile.is_eligible_to_donate and donor_profile.next_eligible_date %}
+        <div class="eligibility-banner" style="background: rgba(253,126,20,0.12); border: 1px solid rgba(253,126,20,0.3); color: #fd7e14; padding: 0.85rem 1.1rem; border-radius: 12px; margin-bottom: 1.5rem; font-size: 0.88rem; line-height: 1.5;">
+            ⏰ <strong>Ineligibility Period Active:</strong> You are currently in the 90-day recovery interval following your last donation on <strong>{{ donor_profile.last_donation_date.strftime('%d %b %Y') }}</strong>. You will automatically become eligible to donate again on <strong>{{ donor_profile.next_eligible_date.strftime('%d %b %Y') }}</strong>.
+        </div>
+        {% endif %}
 
         <div class="tab-buttons">
             <button class="tab-button active" onclick="switchTab('high-requests', this)">🚨 High / Critical</button>
