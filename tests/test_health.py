@@ -1,5 +1,6 @@
 """Health and smoke tests for LifeLink."""
 import json
+from datetime import datetime, timedelta
 
 
 # ── Health endpoint ──────────────────────────────────────────────────────────
@@ -309,4 +310,58 @@ def test_find_requests_orders_by_urgency_priority(client):
     requests = res.get_json()
     urgencies = [r['urgency'] for r in requests]
     assert urgencies == ['critical', 'high', 'medium', 'low']
+
+
+def test_auto_match_cascading_tiers(app, db):
+    from models import db, User, DonorProfile, SeekerRequest, Match
+    from services.matching_service import auto_match_request
+
+    with app.app_context():
+        # Create Seeker in Mumbai, Maharashtra
+        seeker_u = User(username='seeker_geo', email='seeker_geo@test.com', password='hash', user_type='seeker', full_name='Seeker Geo', phone='1111111111', city='Mumbai', state='Maharashtra')
+        db.session.add(seeker_u)
+        db.session.commit()
+
+        sr = SeekerRequest(user_id=seeker_u.id, blood_group='B+', units_needed=1, urgency='high', reason='Surgery', hospital_name='Hosp', hospital_address='Addr', required_by=datetime.utcnow() + timedelta(days=1))
+        db.session.add(sr)
+        db.session.commit()
+
+        # Donor 1: Mumbai, Maharashtra (City match - Tier 1)
+        d1_u = User(username='d1', email='d1@test.com', password='hash', user_type='donor', full_name='D1', phone='2222222222', city='Mumbai', state='Maharashtra')
+        db.session.add(d1_u)
+        db.session.commit()
+        d1_p = DonorProfile(user_id=d1_u.id, blood_group='B+', age=25, gender='Male', available_to_donate=True)
+        db.session.add(d1_p)
+
+        # Donor 2: Pune, Maharashtra (State match - Tier 2)
+        d2_u = User(username='d2', email='d2@test.com', password='hash', user_type='donor', full_name='D2', phone='3333333333', city='Pune', state='Maharashtra')
+        db.session.add(d2_u)
+        db.session.commit()
+        d2_p = DonorProfile(user_id=d2_u.id, blood_group='B+', age=26, gender='Female', available_to_donate=True)
+        db.session.add(d2_p)
+
+        # Donor 3: Delhi, Delhi (Nationwide match - Tier 3)
+        d3_u = User(username='d3', email='d3@test.com', password='hash', user_type='donor', full_name='D3', phone='4444444444', city='Delhi', state='Delhi')
+        db.session.add(d3_u)
+        db.session.commit()
+        d3_p = DonorProfile(user_id=d3_u.id, blood_group='B+', age=27, gender='Male', available_to_donate=True)
+        db.session.add(d3_p)
+        db.session.commit()
+
+        # Test cascading fallback with threshold=3: should match all 3 donors across city, state, nationwide
+        matched = auto_match_request(sr, threshold=3)
+        assert len(matched) == 3
+        matched_user_ids = [m.user_id for m in matched]
+        assert d1_u.id in matched_user_ids
+        assert d2_u.id in matched_user_ids
+        assert d3_u.id in matched_user_ids
+
+        # Test with threshold=1: should only match Tier 1 (d1_u in Mumbai)
+        Match.query.delete()
+        db.session.commit()
+
+        matched_tier1 = auto_match_request(sr, threshold=1)
+        assert len(matched_tier1) == 1
+        assert matched_tier1[0].user_id == d1_u.id
+
 

@@ -1,14 +1,75 @@
-from extensions import db
-from models import DonorProfile, SeekerRequest, Match
+from models import db, User, DonorProfile, SeekerRequest, Match
 
 
-def auto_match_request(seeker_request):
-    matching_donors = DonorProfile.query.filter_by(
-        blood_group=seeker_request.blood_group, available_to_donate=True
-    ).all()
-    for dp in matching_donors:
-        db.session.add(Match(request_id=seeker_request.id, donor_id=dp.user_id))
+def auto_match_request(seeker_request, threshold=3):
+    """
+    3-Tier Cascading Donor Matching Algorithm:
+    1. Tier 1 (City): Primary search matches available donors with the exact blood group in the seeker's city.
+    2. Tier 2 (State): Secondary fallback if < threshold donors found, expanding to donors in the same state.
+    3. Tier 3 (Nationwide): Final fallback if still < threshold donors found, matching all available compatible donors nationwide.
+    """
+    seeker_user = seeker_request.user
+    if not seeker_user:
+        seeker_user = db.session.get(User, seeker_request.user_id)
+
+    seeker_city  = seeker_user.city.strip() if seeker_user and seeker_user.city else ""
+    seeker_state = seeker_user.state.strip() if seeker_user and seeker_user.state else ""
+
+    matched_donors    = []
+    matched_donor_ids = set()
+
+    # Tier 1: Same Blood Group + Same City
+    if seeker_city:
+        city_donors = DonorProfile.query.filter_by(
+            blood_group=seeker_request.blood_group,
+            available_to_donate=True
+        ).join(User).filter(
+            User.id != seeker_request.user_id,
+            User.city.ilike(seeker_city)
+        ).all()
+
+        for dp in city_donors:
+            if dp.user_id not in matched_donor_ids:
+                matched_donors.append(dp)
+                matched_donor_ids.add(dp.user_id)
+
+    # Tier 2: Same Blood Group + Same State
+    if len(matched_donors) < threshold and seeker_state:
+        state_donors = DonorProfile.query.filter_by(
+            blood_group=seeker_request.blood_group,
+            available_to_donate=True
+        ).join(User).filter(
+            User.id != seeker_request.user_id,
+            User.state.ilike(seeker_state)
+        ).all()
+
+        for dp in state_donors:
+            if dp.user_id not in matched_donor_ids:
+                matched_donors.append(dp)
+                matched_donor_ids.add(dp.user_id)
+
+    # Tier 3: Same Blood Group Nationwide
+    if len(matched_donors) < threshold:
+        nationwide_donors = DonorProfile.query.filter_by(
+            blood_group=seeker_request.blood_group,
+            available_to_donate=True
+        ).join(User).filter(
+            User.id != seeker_request.user_id
+        ).all()
+
+        for dp in nationwide_donors:
+            if dp.user_id not in matched_donor_ids:
+                matched_donors.append(dp)
+                matched_donor_ids.add(dp.user_id)
+
+    # Upsert Match entries
+    for dp in matched_donors:
+        existing = Match.query.filter_by(request_id=seeker_request.id, donor_id=dp.user_id).first()
+        if not existing:
+            db.session.add(Match(request_id=seeker_request.id, donor_id=dp.user_id))
+
     db.session.commit()
+    return matched_donors
 
 
 def process_accept_match(donor_user_id, target_id):
