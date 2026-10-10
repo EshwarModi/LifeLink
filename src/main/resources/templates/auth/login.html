@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Sign In — LifeLink')}"></head>
+<body>
+
+    <header th:replace="~{fragments/layout :: navbar}"></header>
+
+    <main>
+        <div class="form-container">
+            <div class="card">
+                <div style="text-align: center; margin-bottom: 1.5rem;">
+                    <span class="brand-icon" style="margin: 0 auto 0.5rem auto;">♥</span>
+                    <h2 style="color: var(--color-secondary);">Welcome Back</h2>
+                    <p style="color: var(--color-text-muted); font-size: 0.95rem;">Sign in to your LifeLink account</p>
+                </div>
+
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <!-- Form Login with automatic CSRF token -->
+                <form th:action="@{/login}" method="post">
+                    <div class="form-group">
+                        <label class="form-label" for="username">Username or Email Address</label>
+                        <input type="text" id="username" name="username" class="form-control"
+                               placeholder="e.g. john_doe or john@example.com" required autofocus>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password</label>
+                        <input type="password" id="password" name="password" class="form-control"
+                               placeholder="••••••••" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                        Sign In
+                    </button>
+                </form>
+
+                <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--color-text-muted);">
+                    Don't have an account yet?
+                    <a th:href="@{/register}" style="font-weight: 600;">Create one now</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+
+</body>
+</html>

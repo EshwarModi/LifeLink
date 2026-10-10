@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Create Account — LifeLink')}"></head>
+<body>
+
+    <header th:replace="~{fragments/layout :: navbar}"></header>
+
+    <main>
+        <div class="form-container" style="max-width: 720px;">
+            <div class="card">
+                <div style="text-align: center; margin-bottom: 1.5rem;">
+                    <span class="brand-icon" style="margin: 0 auto 0.5rem auto;">♥</span>
+                    <h2 style="color: var(--color-secondary);">Join LifeLink</h2>
+                    <p style="color: var(--color-text-muted); font-size: 0.95rem;">Register as a Blood Donor or Patient/Seeker</p>
+                </div>
+
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <!-- Registration Form with CSRF token -->
+                <form th:action="@{/register}" th:object="${userRegistrationDto}" method="post">
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="username">Username</label>
+                            <input type="text" id="username" th:field="*{username}" class="form-control"
+                                   placeholder="e.g. john_doe" required>
+                            <span class="field-error" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="email">Email Address</label>
+                            <input type="email" id="email" th:field="*{email}" class="form-control"
+                                   placeholder="john@example.com" required>
+                            <span class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password</label>
+                        <input type="password" id="password" th:field="*{password}" class="form-control"
+                               placeholder="Min 8 characters, upper, lower, & digit" required>
+                        <small style="color: var(--color-text-muted); font-size: 0.8rem;">
+                            Must contain at least 8 characters, 1 uppercase, 1 lowercase, and 1 digit.
+                        </small>
+                        <span class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="fullName">Full Name</label>
+                            <input type="text" id="fullName" th:field="*{fullName}" class="form-control"
+                                   placeholder="John Doe" required>
+                            <span class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="phone">Phone Number</label>
+                            <input type="text" id="phone" th:field="*{phone}" class="form-control"
+                                   placeholder="+91 98765 43210" required>
+                            <span class="field-error" th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="city">City</label>
+                            <input type="text" id="city" th:field="*{city}" class="form-control"
+                                   placeholder="e.g. Mumbai" required>
+                            <span class="field-error" th:if="${#fields.hasErrors('city')}" th:errors="*{city}"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="state">State</label>
+                            <input type="text" id="state" th:field="*{state}" class="form-control"
+                                   placeholder="e.g. Maharashtra" required>
+                            <span class="field-error" th:if="${#fields.hasErrors('state')}" th:errors="*{state}"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="userType">Account Role</label>
+                        <select id="userType" th:field="*{userType}" class="form-control" required>
+                            <option th:each="ut : ${userTypes}" th:value="${ut}" th:text="${ut.label}"></option>
+                        </select>
+                        <span class="field-error" th:if="${#fields.hasErrors('userType')}" th:errors="*{userType}"></span>
+                    </div>
+
+                    <!-- Dynamic Donor Fields (Toggled automatically via JS when role is DONOR) -->
+                    <div id="donorFields" style="background: var(--color-bg-subtle); padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.25rem;">
+                        <h4 style="color: var(--color-primary-dark); margin-bottom: 1rem;">Donor Profile Details</h4>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label" for="bloodGroup">Blood Group</label>
+                                <select id="bloodGroup" th:field="*{bloodGroup}" class="form-control">
+                                    <option value="">Select Blood Group</option>
+                                    <option th:each="bg : ${bloodGroups}" th:value="${bg}" th:text="${bg.label}"></option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('bloodGroup')}" th:errors="*{bloodGroup}"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="age">Age (18-65)</label>
+                                <input type="number" id="age" th:field="*{age}" class="form-control" min="18" max="65" placeholder="e.g. 25">
+                                <span class="field-error" th:if="${#fields.hasErrors('age')}" th:errors="*{age}"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label" for="gender">Gender</label>
+                                <select id="gender" th:field="*{gender}" class="form-control">
+                                    <option value="">Select Gender</option>
+                                    <option th:each="g : ${genders}" th:value="${g}" th:text="${g.label}"></option>
+                                </select>
+                                <span class="field-error" th:if="${#fields.hasErrors('gender')}" th:errors="*{gender}"></span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="lastDonationDate">Last Donation Date (if any)</label>
+                            <input type="date" id="lastDonationDate" th:field="*{lastDonationDate}" class="form-control">
+                            <span class="field-error" th:if="${#fields.hasErrors('lastDonationDate')}" th:errors="*{lastDonationDate}"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="medicalConditions">Medical Conditions Notes (optional)</label>
+                            <textarea id="medicalConditions" th:field="*{medicalConditions}" class="form-control" rows="2"
+                                      placeholder="Any notable allergies, medications, or historical conditions..."></textarea>
+                            <span class="field-error" th:if="${#fields.hasErrors('medicalConditions')}" th:errors="*{medicalConditions}"></span>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+                        Create My LifeLink Account
+                    </button>
+                </form>
+
+                <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--color-text-muted);">
+                    Already registered?
+                    <a th:href="@{/login}" style="font-weight: 600;">Sign in here</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+
+</body>
+</html>

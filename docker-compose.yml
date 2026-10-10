@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: lifelink-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: lifelink
+      MYSQL_USER: lifelink
+      MYSQL_PASSWORD: lifelink_secret
+      MYSQL_ROOT_PASSWORD: root_secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - lifelink-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lifelink-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: lifelink
+      DB_USERNAME: lifelink
+      DB_PASSWORD: lifelink_secret
+      FLYWAY_ENABLED: "true"
+      ADMIN_USERNAME: admin
+      ADMIN_EMAIL: admin@lifelink.org
+      ADMIN_PASSWORD: Admin@12345
+      ADMIN_FULL_NAME: "System Administrator"
+      ADMIN_PHONE: "+919876543210"
+      ADMIN_CITY: "Bengaluru"
+      ADMIN_STATE: "Karnataka"
+      REQUEST_EXPIRATION_INTERVAL_MS: "900000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 35s
+    networks:
+      - lifelink-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  lifelink-network:
+    driver: bridge

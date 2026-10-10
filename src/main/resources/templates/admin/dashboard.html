@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Admin Dashboard — LifeLink')}"></head>
+<body>
+
+    <header th:replace="~{fragments/layout :: navbar}"></header>
+
+    <main>
+        <div th:replace="~{fragments/layout :: alerts}"></div>
+
+        <!-- Admin Overview Banner -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <span class="badge badge-blood" style="margin-bottom: 0.5rem;">Read-Only System View</span>
+                    <h1 style="font-size: 1.8rem; color: var(--color-secondary);">Administrator Analytics Dashboard</h1>
+                    <p style="color: var(--color-text-muted);">
+                        Logged in as: <strong th:text="${user.fullName}">Administrator</strong> (<span th:text="${user.username}">admin</span>)
+                    </p>
+                </div>
+                <div>
+                    <form th:action="@{/logout}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-secondary btn-sm">Sign Out</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. User Counts by Type -->
+        <section class="card">
+            <h2 style="font-size: 1.3rem; color: var(--color-secondary); margin-bottom: 1rem;">
+                User Accounts Breakdown (Total: <span th:text="${totalUsers}">0</span>)
+            </h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" th:text="${donorCount}">0</div>
+                    <div class="stat-label">Registered Donors</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" th:text="${seekerCount}">0</div>
+                    <div class="stat-label">Patients / Seekers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" th:text="${adminCount}">0</div>
+                    <div class="stat-label">System Admins</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Request Counts by Status -->
+        <section class="card">
+            <h2 style="font-size: 1.3rem; color: var(--color-secondary); margin-bottom: 1rem;">
+                Blood Requests Breakdown (Total: <span th:text="${totalRequests}">0</span>)
+            </h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #0369a1;" th:text="${openRequests}">0</div>
+                    <div class="stat-label">Open Active</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #15803d;" th:text="${fulfilledRequests}">0</div>
+                    <div class="stat-label">Fulfilled</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #64748b;" th:text="${cancelledRequests}">0</div>
+                    <div class="stat-label">Cancelled</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #b91c1c;" th:text="${expiredRequests}">0</div>
+                    <div class="stat-label">Expired (Overdue)</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Match Counts by Status -->
+        <section class="card">
+            <h2 style="font-size: 1.3rem; color: var(--color-secondary); margin-bottom: 1rem;">
+                Matches Breakdown (Total: <span th:text="${totalMatches}">0</span>)
+            </h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #b45309;" th:text="${pendingMatches}">0</div>
+                    <div class="stat-label">Pending Response</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #15803d;" th:text="${acceptedMatches}">0</div>
+                    <div class="stat-label">Accepted (Contact Shared)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #64748b;" th:text="${declinedMatches}">0</div>
+                    <div class="stat-label">Declined</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" style="color: #b91c1c;" th:text="${expiredMatches}">0</div>
+                    <div class="stat-label">Expired</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 10 Most Recent Blood Requests -->
+        <section class="card">
+            <h2 style="font-size: 1.3rem; color: var(--color-secondary); margin-bottom: 1rem;">
+                10 Most Recent Blood Requests
+            </h2>
+
+            <div th:if="${recentRequests == null or #lists.isEmpty(recentRequests)}" class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <h3>No Requests in System</h3>
+                <p>When requests are created, the most recent 10 will be listed here.</p>
+            </div>
+
+            <div th:if="${recentRequests != null and not #lists.isEmpty(recentRequests)}" class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Requester</th>
+                            <th>Blood Group</th>
+                            <th>Units</th>
+                            <th>Urgency</th>
+                            <th>Hospital</th>
+                            <th>City</th>
+                            <th>Required By</th>
+                            <th>Status</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="r : ${recentRequests}">
+                            <td><strong th:text="'#' + ${r.id}">#1</strong></td>
+                            <td th:text="${r.seeker.fullName}">John Doe</td>
+                            <td><span class="badge badge-blood" th:text="${r.bloodGroup.label}">A+</span></td>
+                            <td><strong th:text="${r.unitsNeeded}">1</strong> unit(s)</td>
+                            <td>
+                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(r.urgency.name())}"
+                                      th:text="${r.urgency.label}">HIGH</span>
+                            </td>
+                            <td th:text="${r.hospitalName}">Hospital</td>
+                            <td th:text="${r.seeker.city}">City</td>
+                            <td th:text="${r.requiredBy}">2026-10-15</td>
+                            <td>
+                                <span th:class="'badge badge-' + ${#strings.toLowerCase(r.status.name())}"
+                                      th:text="${r.status.label}">OPEN</span>
+                            </td>
+                            <td th:text="${#temporals.format(r.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-10 12:00</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+
+</body>
+</html>

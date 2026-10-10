@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Edit Donor Profile — LifeLink')}"></head>
+<body>
+
+    <header th:replace="~{fragments/layout :: navbar}"></header>
+
+    <main>
+        <div class="form-container" style="max-width: 600px;">
+            <div class="card">
+                <h2 style="color: var(--color-secondary); margin-bottom: 0.5rem;">Donor Profile Settings</h2>
+                <p style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
+                    Keep your blood group, age, and donation availability up to date.
+                </p>
+
+                <div th:replace="~{fragments/layout :: alerts}"></div>
+
+                <!-- Profile Update Form with CSRF token -->
+                <form th:action="@{/donor/profile}" th:object="${profileDto}" method="post">
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="bloodGroup">Blood Group</label>
+                            <select id="bloodGroup" th:field="*{bloodGroup}" class="form-control" required>
+                                <option th:each="bg : ${bloodGroups}" th:value="${bg}" th:text="${bg.label}"></option>
+                            </select>
+                            <span class="field-error" th:if="${#fields.hasErrors('bloodGroup')}" th:errors="*{bloodGroup}"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="age">Age (18-65)</label>
+                            <input type="number" id="age" th:field="*{age}" class="form-control" min="18" max="65" required>
+                            <span class="field-error" th:if="${#fields.hasErrors('age')}" th:errors="*{age}"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label" for="gender">Gender</label>
+                            <select id="gender" th:field="*{gender}" class="form-control" required>
+                                <option th:each="g : ${genders}" th:value="${g}" th:text="${g.label}"></option>
+                            </select>
+                            <span class="field-error" th:if="${#fields.hasErrors('gender')}" th:errors="*{gender}"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="lastDonationDate">Last Donation Date</label>
+                            <input type="date" id="lastDonationDate" th:field="*{lastDonationDate}" class="form-control">
+                            <span class="field-error" th:if="${#fields.hasErrors('lastDonationDate')}" th:errors="*{lastDonationDate}"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin: 1rem 0;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer;">
+                            <input type="checkbox" th:field="*{availableToDonate}" style="width: 1.25rem; height: 1.25rem;">
+                            <span>I am actively available and willing to donate blood</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="medicalConditions">Medical Conditions Notes (optional)</label>
+                        <textarea id="medicalConditions" th:field="*{medicalConditions}" class="form-control" rows="3"
+                                  placeholder="List any conditions, ongoing prescriptions, or travel history..."></textarea>
+                        <span class="field-error" th:if="${#fields.hasErrors('medicalConditions')}" th:errors="*{medicalConditions}"></span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem;">
+                        <a th:href="@{/donor/dashboard}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Profile</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+
+</body>
+</html>

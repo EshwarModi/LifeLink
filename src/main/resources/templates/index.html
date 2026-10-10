@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('LifeLink — Real-Time Blood Donation Network')}"></head>
+<body>
+
+    <header th:replace="~{fragments/layout :: navbar}"></header>
+
+    <main>
+        <div th:replace="~{fragments/layout :: alerts}"></div>
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Connecting Blood Donors & Patients in Critical Need</h1>
+            <p>LifeLink is a real-time, privacy-first blood donation matching network. When seconds matter, our three-tier location algorithm matches urgent hospital requests with nearby eligible donors.</p>
+            <div class="hero-actions">
+                <span sec:authorize="isAnonymous()">
+                    <a th:href="@{/register}" class="btn btn-primary btn-lg">Become a Donor Today</a>
+                    <a th:href="@{/requests}" class="btn btn-secondary btn-lg">Browse Open Requests</a>
+                </span>
+                <span sec:authorize="hasRole('SEEKER')">
+                    <a th:href="@{/requests/new}" class="btn btn-primary btn-lg">+ Post an Urgent Blood Request</a>
+                    <a th:href="@{/seeker/dashboard}" class="btn btn-secondary btn-lg">My Seeker Dashboard</a>
+                </span>
+                <span sec:authorize="hasRole('DONOR')">
+                    <a th:href="@{/donor/dashboard}" class="btn btn-primary btn-lg">View Matching Requests</a>
+                    <a th:href="@{/donor/profile}" class="btn btn-secondary btn-lg">Update My Availability</a>
+                </span>
+            </div>
+        </section>
+
+        <!-- Platform Live Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" th:text="${totalDonors}">0</div>
+                <div class="stat-label">Active Registered Donors</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${totalRequests}">0</div>
+                <div class="stat-label">Total Blood Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${fulfilledRequests}">0</div>
+                <div class="stat-label">Requests Fulfilled</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Contact Privacy Protected</div>
+            </div>
+        </div>
+
+        <!-- How It Works Section -->
+        <section class="how-it-works">
+            <h2 class="section-title">How LifeLink Works</h2>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h3>Post an Urgent Request</h3>
+                    <p>Hospitals or patients submit blood requirements specifying blood group, units, hospital, and deadline.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h3>Automated 3-Tier Match</h3>
+                    <p>Our algorithm instantly alerts eligible donors in the same city, expands to state, and broader if needed.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h3>Secure Connection</h3>
+                    <p>Phone numbers are strictly revealed only when an eligible donor clicks "I Can Help" to accept.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Urgent Open Requests Section -->
+        <section class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+                <h2 style="font-size: 1.4rem; color: var(--color-secondary);">Urgent Open Requests</h2>
+                <a th:href="@{/requests}" class="btn btn-secondary btn-sm">View All &rarr;</a>
+            </div>
+
+            <div th:if="${recentRequests == null or #lists.isEmpty(recentRequests)}" class="empty-state">
+                <div class="empty-state-icon">🩸</div>
+                <h3>No Open Requests Right Now</h3>
+                <p>All current blood requests have been fulfilled or matched!</p>
+            </div>
+
+            <div th:if="${recentRequests != null and not #lists.isEmpty(recentRequests)}" class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Blood Group</th>
+                            <th>Units Needed</th>
+                            <th>Urgency</th>
+                            <th>Hospital & City</th>
+                            <th>Required By</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="req : ${recentRequests}">
+                            <td>
+                                <span class="badge badge-blood" th:text="${req.bloodGroup.label}">A+</span>
+                            </td>
+                            <td><strong th:text="${req.unitsNeeded}">2</strong> unit(s)</td>
+                            <td>
+                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(req.urgency.name())}"
+                                      th:text="${req.urgency.label}">HIGH</span>
+                            </td>
+                            <td>
+                                <strong th:text="${req.hospitalName}">Hospital</strong><br>
+                                <small style="color: var(--color-text-muted);" th:text="${req.seeker.city + ', ' + req.seeker.state}">City, State</small>
+                            </td>
+                            <td th:text="${req.requiredBy}">2026-10-15</td>
+                            <td>
+                                <a th:href="@{/requests/{id}(id=${req.id})}" class="btn btn-primary btn-sm">View & Respond</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Donor Hub — LifeLink')}"></head>
+<body>
+
+    <header th:replace="~{fragments/layout :: navbar}"></header>
+
+    <main>
+        <div th:replace="~{fragments/layout :: alerts}"></div>
+
+        <!-- Donor Overview & Availability Card -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <span class="badge badge-blood" style="font-size: 1rem; margin-bottom: 0.5rem;" th:text="${profile.bloodGroup.label}">O+</span>
+                    <h1 style="font-size: 1.8rem; color: var(--color-secondary);">Donor Hub: <span th:text="${user.fullName}">Donor Name</span></h1>
+                    <p style="color: var(--color-text-muted);">
+                        Location: <strong th:text="${user.city + ', ' + user.state}">City, State</strong> |
+                        Age: <strong th:text="${profile.age}">25</strong> |
+                        Gender: <strong th:text="${profile.gender.label}">Male</strong>
+                    </p>
+                </div>
+                <div>
+                    <a th:href="@{/donor/profile}" class="btn btn-secondary btn-sm">Edit Donor Profile</a>
+                </div>
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--color-border); margin: 1.25rem 0;">
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; align-items: center;">
+                <div>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase;">Availability Status</span>
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.25rem;">
+                        <span th:class="${profile.availableToDonate ? 'badge badge-fulfilled' : 'badge badge-cancelled'}"
+                              style="font-size: 0.95rem; padding: 0.35rem 0.8rem;"
+                              th:text="${profile.availableToDonate ? 'AVAILABLE TO DONATE' : 'CURRENTLY UNAVAILABLE'}">
+                            AVAILABLE
+                        </span>
+                        <!-- Availability Toggle Form with CSRF token -->
+                        <form th:action="@{/donor/availability}" method="post" style="display: inline;">
+                            <input type="hidden" name="available" th:value="${!profile.availableToDonate}">
+                            <button type="submit" class="btn btn-secondary btn-sm"
+                                    th:text="${profile.availableToDonate ? 'Switch to Unavailable' : 'Switch to Available'}">
+                                Toggle
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase;">Medical Eligibility (90-Day Rule)</span>
+                    <div style="margin-top: 0.25rem;">
+                        <span th:if="${isEligible}" style="color: #15803d; font-weight: 700;">
+                            ✓ Eligible to Donate Now
+                        </span>
+                        <span th:unless="${isEligible}" style="color: #b91c1c; font-weight: 700;">
+                            ⏳ Next Eligible:
+                            <span th:text="${nextEligibleDate != null ? nextEligibleDate : 'After 90-day recovery'}">Date</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div>
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase;">Last Donation</span>
+                    <div style="margin-top: 0.25rem; font-weight: 600;">
+                        <span th:text="${profile.lastDonationDate != null ? profile.lastDonationDate : 'No prior donations recorded'}">Never</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Matched Requests (Action Inbox) -->
+        <section class="card">
+            <h2 style="font-size: 1.4rem; color: var(--color-secondary); margin-bottom: 1rem;">Matched Blood Inquiries</h2>
+
+            <div th:if="${matches == null or #lists.isEmpty(matches)}" class="empty-state">
+                <div class="empty-state-icon">🔔</div>
+                <h3>No Active Matches Assigned</h3>
+                <p>When an urgent request matching your blood group is posted nearby, it will appear here immediately.</p>
+            </div>
+
+            <div th:if="${matches != null and not #lists.isEmpty(matches)}" class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Hospital & Location</th>
+                            <th>Units Needed</th>
+                            <th>Urgency</th>
+                            <th>Required By</th>
+                            <th>Match Status</th>
+                            <th>Contact Phone</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="m : ${matches}">
+                            <td>
+                                <strong th:text="${m.request.hospitalName}">Hospital Name</strong><br>
+                                <small style="color: var(--color-text-muted);" th:text="${m.request.hospitalAddress + ', ' + m.request.seeker.city}">Address, City</small>
+                            </td>
+                            <td><strong th:text="${m.request.unitsNeeded}">2</strong> unit(s)</td>
+                            <td>
+                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(m.request.urgency.name())}"
+                                      th:text="${m.request.urgency.label}">HIGH</span>
+                            </td>
+                            <td th:text="${m.request.requiredBy}">2026-10-15</td>
+                            <td>
+                                <span th:class="'badge badge-' + ${#strings.toLowerCase(m.status.name())}"
+                                      th:text="${m.status.label}">PENDING</span>
+                            </td>
+                            <td>
+                                <!-- Contact revealed only upon acceptance (Design Decision #5) -->
+                                <span th:if="${m.contactShared}" style="color: #15803d; font-weight: 700;" th:text="${m.request.seeker.phone}">
+                                    9876543210
+                                </span>
+                                <span th:unless="${m.contactShared}" style="color: var(--color-text-muted); font-size: 0.85rem;">
+                                    🔒 Hidden until accepted
+                                </span>
+                            </td>
+                            <td>
+                                <div th:if="${m.status.name() == 'PENDING' and m.request.status.name() == 'OPEN'}" style="display: flex; gap: 0.5rem;">
+                                    <!-- Canonical Accept Match Form with CSRF token -->
+                                    <form th:action="@{/matches/{id}/accept(id=${m.request.id})}" method="post">
+                                        <button type="submit" class="btn btn-success btn-sm">I Can Help</button>
+                                    </form>
+                                    <!-- Decline Match Form with CSRF token -->
+                                    <form th:action="@{/matches/{id}/decline(id=${m.request.id})}" method="post">
+                                        <button type="submit" class="btn btn-secondary btn-sm">Decline</button>
+                                    </form>
+                                </div>
+                                <span th:if="${m.status.name() == 'ACCEPTED'}" style="color: #15803d; font-weight: 600;">
+                                    ✓ You Accepted
+                                </span>
+                                <span th:if="${m.status.name() == 'EXPIRED'}" style="color: var(--color-text-muted);">
+                                    Request Expired
+                                </span>
+                                <span th:if="${m.status.name() == 'DECLINED'}" style="color: var(--color-text-muted);">
+                                    Declined
+                                </span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Nearby Open Requests in Directory -->
+        <section class="card" th:if="${openRequests != null and not #lists.isEmpty(openRequests)}">
+            <h2 style="font-size: 1.3rem; color: var(--color-secondary); margin-bottom: 1rem;">
+                Open Requests Matching Your Blood Group (<span th:text="${profile.bloodGroup.label}">O+</span>)
+            </h2>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Hospital</th>
+                            <th>City</th>
+                            <th>Units</th>
+                            <th>Urgency</th>
+                            <th>Required By</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="r : ${openRequests}">
+                            <td th:text="${r.hospitalName}">Hospital</td>
+                            <td th:text="${r.seeker.city}">City</td>
+                            <td><strong th:text="${r.unitsNeeded}">1</strong> unit(s)</td>
+                            <td>
+                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(r.urgency.name())}"
+                                      th:text="${r.urgency.label}">HIGH</span>
+                            </td>
+                            <td th:text="${r.requiredBy}">2026-10-15</td>
+                            <td>
+                                <form th:action="@{/matches/{id}/accept(id=${r.id})}" method="post" style="display:inline;">
+                                    <button type="submit" class="btn btn-primary btn-sm">I Can Help</button>
+                                </form>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+
+</body>
+</html>
