@@ -1,5 +1,7 @@
 package com.lifelink.service;
 
+import com.lifelink.config.MatchingMode;
+import com.lifelink.config.MatchingProperties;
 import com.lifelink.model.DonorProfile;
 import com.lifelink.model.Match;
 import com.lifelink.model.SeekerRequest;
@@ -12,26 +14,26 @@ import com.lifelink.repository.MatchRepository;
 import com.lifelink.repository.SeekerRequestRepository;
 import com.lifelink.repository.UserRepository;
 import com.lifelink.service.exception.InvalidRequestStateException;
-import com.lifelink.service.exception.ResourceNotFoundException;
 import com.lifelink.service.exception.UnauthorizedActionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -46,6 +48,7 @@ import static org.mockito.Mockito.when;
  * 1. Location-aware three-tier matching fallback (Tier 1 city -> Tier 2 state -> Tier 3 broad).
  * 2. Donor eligibility checks during match acceptance.
  * 3. Ownership enforcement (donor can only act on their own matches; seeker cannot accept own request).
+ * 4. Phase 12 Feature Flag: EXACT mode (default) vs COMPATIBLE mode (ABO/Rh red cell compatibility).
  */
 @ExtendWith(MockitoExtension.class)
 class MatchingServiceUnitTest {
@@ -65,6 +68,9 @@ class MatchingServiceUnitTest {
     @Mock
     private DonorService donorService;
 
+    @Spy
+    private MatchingProperties matchingProperties = new MatchingProperties();
+
     @InjectMocks
     private MatchingService matchingService;
 
@@ -76,6 +82,8 @@ class MatchingServiceUnitTest {
 
     @BeforeEach
     void setUp() {
+        matchingProperties.setMode(MatchingMode.EXACT);
+
         seeker = User.builder()
                 .id(1L)
                 .username("seeker_john")
@@ -106,8 +114,8 @@ class MatchingServiceUnitTest {
     @DisplayName("Tier Fallback: Tier 1 finds >= 3 donors, so Tier 2 and Tier 3 are never queried")
     void testTierFallback_Tier1Sufficient() {
         // Given Tier 1 returns 3 donors (meeting TARGET_MATCH_THRESHOLD = 3)
-        when(userRepository.findEligibleDonorsByBloodGroupAndCity(
-                eq(BloodGroup.O_POSITIVE), eq("Pune"), any(LocalDate.class), eq(1L)))
+        when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(donor1, donor2, donor3));
 
         when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
@@ -118,9 +126,9 @@ class MatchingServiceUnitTest {
 
         // Then
         assertThat(matches).hasSize(3);
-        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupAndCity(any(), any(), any(), any());
-        verify(userRepository, never()).findEligibleDonorsByBloodGroupAndStateExcludingCity(any(), any(), any(), any(), any());
-        verify(userRepository, never()).findEligibleDonorsByBloodGroupBroadExcludingState(any(), any(), any(), any());
+        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
+        verify(userRepository, never()).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
+        verify(userRepository, never()).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
         verify(notificationService, times(3)).sendMatchNotification(any(User.class), eq(openRequest));
     }
 
@@ -131,13 +139,13 @@ class MatchingServiceUnitTest {
         User donorState2 = User.builder().id(22L).username("donor_nagpur").city("Nagpur").state("Maharashtra").build();
 
         // Tier 1 returns 1 donor
-        when(userRepository.findEligibleDonorsByBloodGroupAndCity(
-                eq(BloodGroup.O_POSITIVE), eq("Pune"), any(LocalDate.class), eq(1L)))
+        when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(donor1));
 
         // Tier 2 returns 2 more donors from same state
-        when(userRepository.findEligibleDonorsByBloodGroupAndStateExcludingCity(
-                eq(BloodGroup.O_POSITIVE), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
+        when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(donorState1, donorState2));
 
         when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
@@ -148,9 +156,9 @@ class MatchingServiceUnitTest {
 
         // Then
         assertThat(matches).hasSize(3);
-        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupAndCity(any(), any(), any(), any());
-        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupAndStateExcludingCity(any(), any(), any(), any(), any());
-        verify(userRepository, never()).findEligibleDonorsByBloodGroupBroadExcludingState(any(), any(), any(), any());
+        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
+        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
+        verify(userRepository, never()).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
         verify(notificationService, times(3)).sendMatchNotification(any(User.class), eq(openRequest));
     }
 
@@ -162,18 +170,18 @@ class MatchingServiceUnitTest {
         User donorNationwide2 = User.builder().id(32L).username("donor_bangalore").city("Bengaluru").state("Karnataka").build();
 
         // Tier 1 returns 1
-        when(userRepository.findEligibleDonorsByBloodGroupAndCity(
-                eq(BloodGroup.O_POSITIVE), eq("Pune"), any(LocalDate.class), eq(1L)))
+        when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(donor1));
 
         // Tier 2 returns 1
-        when(userRepository.findEligibleDonorsByBloodGroupAndStateExcludingCity(
-                eq(BloodGroup.O_POSITIVE), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
+        when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(donorState1));
 
         // Tier 3 returns 2 nationwide donors
-        when(userRepository.findEligibleDonorsByBloodGroupBroadExcludingState(
-                eq(BloodGroup.O_POSITIVE), eq("Maharashtra"), any(LocalDate.class), eq(1L)))
+        when(userRepository.findEligibleDonorsByBloodGroupsBroadExcludingState(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Maharashtra"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(donorNationwide1, donorNationwide2));
 
         when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
@@ -184,9 +192,9 @@ class MatchingServiceUnitTest {
 
         // Then: Total capped at TARGET_MATCH_THRESHOLD (3)
         assertThat(matches).hasSize(3);
-        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupAndCity(any(), any(), any(), any());
-        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupAndStateExcludingCity(any(), any(), any(), any(), any());
-        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupBroadExcludingState(any(), any(), any(), any());
+        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
+        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
+        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
     }
 
     @Test
@@ -202,25 +210,25 @@ class MatchingServiceUnitTest {
         List<Match> matches = matchingService.findAndCreateMatches(fulfilledRequest);
 
         assertThat(matches).isEmpty();
-        verify(userRepository, never()).findEligibleDonorsByBloodGroupAndCity(any(), any(), any(), any());
+        verify(userRepository, never()).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
     }
 
     @Test
     @DisplayName("Tier Fallback: Deduplication ensures same donor is not added twice across tiers")
     void testTierFallback_DeduplicationAcrossTiers() {
         // Tier 1 returns donor1
-        when(userRepository.findEligibleDonorsByBloodGroupAndCity(
-                eq(BloodGroup.O_POSITIVE), eq("Pune"), any(LocalDate.class), eq(1L)))
+        when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(donor1));
 
         // Tier 2 also returns donor1 (edge case / query overlap) plus donor2
-        when(userRepository.findEligibleDonorsByBloodGroupAndStateExcludingCity(
-                eq(BloodGroup.O_POSITIVE), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
+        when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(donor1, donor2));
 
         // Tier 3 returns donor3
-        when(userRepository.findEligibleDonorsByBloodGroupBroadExcludingState(
-                eq(BloodGroup.O_POSITIVE), eq("Maharashtra"), any(LocalDate.class), eq(1L)))
+        when(userRepository.findEligibleDonorsByBloodGroupsBroadExcludingState(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Maharashtra"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(donor3));
 
         when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
@@ -231,6 +239,148 @@ class MatchingServiceUnitTest {
         assertThat(matches).hasSize(3);
         List<Long> matchedDonorIds = matches.stream().map(m -> m.getDonor().getId()).toList();
         assertThat(matchedDonorIds).containsExactly(11L, 12L, 13L);
+    }
+
+    // =========================================================================
+    // Phase 12: EXACT vs COMPATIBLE Mode Tests
+    // =========================================================================
+
+    @Test
+    @DisplayName("EXACT Mode (Default): When exact donors are insufficient, does NOT expand to compatible groups")
+    void testExactMode_DoesNotQueryCompatibleDonors() {
+        matchingProperties.setMode(MatchingMode.EXACT);
+
+        // Tier 1 returns 1 donor
+        when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(List.of(donor1));
+        // Tier 2 & 3 return empty
+        when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(anyCollection(), any(), any(), any(), any()))
+                .thenReturn(List.of());
+        when(userRepository.findEligibleDonorsByBloodGroupsBroadExcludingState(anyCollection(), any(), any(), any()))
+                .thenReturn(List.of());
+
+        when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
+        when(matchRepository.save(any(Match.class))).thenAnswer(i -> i.getArgument(0));
+
+        List<Match> matches = matchingService.findAndCreateMatches(openRequest);
+
+        assertThat(matches).hasSize(1);
+        // Repository should have ONLY been called for exact blood group [O_POSITIVE]
+        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(eq(List.of(BloodGroup.O_POSITIVE)), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("COMPATIBLE Mode: Ranks exact blood group matches first, then expands to compatible groups in tier order")
+    void testCompatibleMode_RanksExactFirst_ThenExpandsToCompatibleDonors() {
+        matchingProperties.setMode(MatchingMode.COMPATIBLE);
+
+        // Request requires A_POSITIVE
+        SeekerRequest aPosRequest = SeekerRequest.builder()
+                .id(300L)
+                .seeker(seeker)
+                .bloodGroup(BloodGroup.A_POSITIVE)
+                .unitsNeeded(2)
+                .status(RequestStatus.OPEN)
+                .build();
+
+        User exactDonorA = User.builder().id(41L).username("donor_exact_a").city("Pune").state("Maharashtra").build();
+        User compDonorONeg = User.builder().id(42L).username("donor_o_neg").city("Pune").state("Maharashtra").build();
+        User compDonorOPos = User.builder().id(43L).username("donor_o_pos").city("Mumbai").state("Maharashtra").build();
+
+        // Phase 1 (Exact A+): Tier 1 city returns 1 exact donor; Tier 2 & Tier 3 return empty
+        when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                eq(List.of(BloodGroup.A_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(List.of(exactDonorA));
+        when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
+                eq(List.of(BloodGroup.A_POSITIVE)), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(List.of());
+        when(userRepository.findEligibleDonorsByBloodGroupsBroadExcludingState(
+                eq(List.of(BloodGroup.A_POSITIVE)), eq("Maharashtra"), any(LocalDate.class), eq(1L)))
+                .thenReturn(List.of());
+
+        // Phase 2 (Compatible non-exact for A+: A-, O+, O-):
+        // Tier 1 (City) returns O- donor
+        List<BloodGroup> expectedCompatibleGroups = List.of(BloodGroup.A_NEGATIVE, BloodGroup.O_POSITIVE, BloodGroup.O_NEGATIVE);
+        when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                eq(expectedCompatibleGroups), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(List.of(compDonorONeg));
+
+        // Tier 2 (State) returns O+ donor
+        when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
+                eq(expectedCompatibleGroups), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(List.of(compDonorOPos));
+
+        when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
+        when(matchRepository.save(any(Match.class))).thenAnswer(i -> i.getArgument(0));
+
+        List<Match> matches = matchingService.findAndCreateMatches(aPosRequest);
+
+        // Then: Total is 3, and exact match is strictly first!
+        assertThat(matches).hasSize(3);
+        assertThat(matches.get(0).getDonor().getId()).isEqualTo(41L); // Exact match first
+        assertThat(matches.get(1).getDonor().getId()).isEqualTo(42L); // Compatible tier 1
+        assertThat(matches.get(2).getDonor().getId()).isEqualTo(43L); // Compatible tier 2
+    }
+
+    @Test
+    @DisplayName("COMPATIBLE Mode: Allows compatible donor (O-) to accept request for A+")
+    void testCompatibleMode_AcceptMatch_SuccessForCompatibleDonor() {
+        matchingProperties.setMode(MatchingMode.COMPATIBLE);
+
+        SeekerRequest aPosRequest = SeekerRequest.builder()
+                .id(300L)
+                .seeker(seeker)
+                .bloodGroup(BloodGroup.A_POSITIVE)
+                .unitsNeeded(2)
+                .status(RequestStatus.OPEN)
+                .build();
+
+        DonorProfile oNegProfile = DonorProfile.builder()
+                .bloodGroup(BloodGroup.O_NEGATIVE)
+                .availableToDonate(true)
+                .build();
+        User oNegDonor = User.builder().id(77L).username("o_neg_donor").donorProfile(oNegProfile).build();
+
+        when(seekerRequestRepository.findById(300L)).thenReturn(Optional.of(aPosRequest));
+        when(userRepository.findById(77L)).thenReturn(Optional.of(oNegDonor));
+        when(donorService.isDonorEligible(oNegProfile)).thenReturn(true);
+        when(matchRepository.findByRequestIdAndDonorId(300L, 77L)).thenReturn(Optional.empty());
+        when(matchRepository.save(any(Match.class))).thenAnswer(i -> i.getArgument(0));
+
+        Match accepted = matchingService.acceptMatch(300L, 77L);
+
+        assertThat(accepted.getStatus()).isEqualTo(MatchStatus.ACCEPTED);
+        assertThat(accepted.isContactShared()).isTrue();
+        assertThat(accepted.isCompatibleOnlyMatch()).isTrue();
+    }
+
+    @Test
+    @DisplayName("EXACT Mode: Rejects non-exact compatible donor (O-) accepting request for A+")
+    void testExactMode_AcceptMatch_RejectsCompatibleNonExactDonor() {
+        matchingProperties.setMode(MatchingMode.EXACT);
+
+        SeekerRequest aPosRequest = SeekerRequest.builder()
+                .id(300L)
+                .seeker(seeker)
+                .bloodGroup(BloodGroup.A_POSITIVE)
+                .unitsNeeded(2)
+                .status(RequestStatus.OPEN)
+                .build();
+
+        DonorProfile oNegProfile = DonorProfile.builder()
+                .bloodGroup(BloodGroup.O_NEGATIVE)
+                .availableToDonate(true)
+                .build();
+        User oNegDonor = User.builder().id(77L).username("o_neg_donor").donorProfile(oNegProfile).build();
+
+        when(seekerRequestRepository.findById(300L)).thenReturn(Optional.of(aPosRequest));
+        when(userRepository.findById(77L)).thenReturn(Optional.of(oNegDonor));
+        when(donorService.isDonorEligible(oNegProfile)).thenReturn(true);
+
+        assertThatThrownBy(() -> matchingService.acceptMatch(300L, 77L))
+                .isInstanceOf(InvalidRequestStateException.class)
+                .hasMessageContaining("does not match request");
     }
 
     // =========================================================================

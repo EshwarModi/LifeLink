@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -66,26 +67,31 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
         SELECT u FROM User u
         JOIN u.donorProfile dp
-        WHERE dp.bloodGroup = :bloodGroup
+        WHERE dp.bloodGroup IN :bloodGroups
           AND dp.availableToDonate = true
           AND (dp.lastDonationDate IS NULL OR dp.lastDonationDate <= :cutoffDate)
           AND LOWER(TRIM(u.city)) = LOWER(TRIM(:city))
           AND u.id != :excludedUserId
         ORDER BY dp.lastDonationDate ASC NULLS FIRST
     """)
-    List<User> findEligibleDonorsByBloodGroupAndCity(
-        @Param("bloodGroup") BloodGroup bloodGroup,
+    List<User> findEligibleDonorsByBloodGroupsAndCity(
+        @Param("bloodGroups") Collection<BloodGroup> bloodGroups,
         @Param("city") String city,
         @Param("cutoffDate") LocalDate cutoffDate,
         @Param("excludedUserId") Long excludedUserId
     );
 
+    default List<User> findEligibleDonorsByBloodGroupAndCity(
+            BloodGroup bloodGroup, String city, LocalDate cutoffDate, Long excludedUserId) {
+        return findEligibleDonorsByBloodGroupsAndCity(List.of(bloodGroup), city, cutoffDate, excludedUserId);
+    }
+
     /**
      * Tier 2 Matching Query:
-     * Finds eligible donors matching exact blood group in the same state,
+     * Finds eligible donors matching the given blood group(s) in the same state,
      * excluding donors from the same city (who were already evaluated in Tier 1).
      *
-     * @param bloodGroup exact blood group
+     * @param bloodGroups collection of matching or compatible blood groups
      * @param state seeker hospital or location state
      * @param city seeker city (to exclude duplicates already returned)
      * @param cutoffDate threshold date (today - 90 days)
@@ -95,7 +101,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
         SELECT u FROM User u
         JOIN u.donorProfile dp
-        WHERE dp.bloodGroup = :bloodGroup
+        WHERE dp.bloodGroup IN :bloodGroups
           AND dp.availableToDonate = true
           AND (dp.lastDonationDate IS NULL OR dp.lastDonationDate <= :cutoffDate)
           AND LOWER(TRIM(u.state)) = LOWER(TRIM(:state))
@@ -103,20 +109,25 @@ public interface UserRepository extends JpaRepository<User, Long> {
           AND u.id != :excludedUserId
         ORDER BY dp.lastDonationDate ASC NULLS FIRST
     """)
-    List<User> findEligibleDonorsByBloodGroupAndStateExcludingCity(
-        @Param("bloodGroup") BloodGroup bloodGroup,
+    List<User> findEligibleDonorsByBloodGroupsAndStateExcludingCity(
+        @Param("bloodGroups") Collection<BloodGroup> bloodGroups,
         @Param("state") String state,
         @Param("city") String city,
         @Param("cutoffDate") LocalDate cutoffDate,
         @Param("excludedUserId") Long excludedUserId
     );
 
+    default List<User> findEligibleDonorsByBloodGroupAndStateExcludingCity(
+            BloodGroup bloodGroup, String state, String city, LocalDate cutoffDate, Long excludedUserId) {
+        return findEligibleDonorsByBloodGroupsAndStateExcludingCity(List.of(bloodGroup), state, city, cutoffDate, excludedUserId);
+    }
+
     /**
      * Tier 3 Matching Query:
-     * Finds eligible donors nationwide matching exact blood group,
+     * Finds eligible donors nationwide matching the given blood group(s),
      * excluding donors from the same state (already evaluated in Tier 1 and 2).
      *
-     * @param bloodGroup exact blood group
+     * @param bloodGroups collection of matching or compatible blood groups
      * @param state seeker state (to exclude donors already returned)
      * @param cutoffDate threshold date (today - 90 days)
      * @param excludedUserId seeker user ID
@@ -125,19 +136,24 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("""
         SELECT u FROM User u
         JOIN u.donorProfile dp
-        WHERE dp.bloodGroup = :bloodGroup
+        WHERE dp.bloodGroup IN :bloodGroups
           AND dp.availableToDonate = true
           AND (dp.lastDonationDate IS NULL OR dp.lastDonationDate <= :cutoffDate)
           AND LOWER(TRIM(u.state)) != LOWER(TRIM(:state))
           AND u.id != :excludedUserId
         ORDER BY dp.lastDonationDate ASC NULLS FIRST
     """)
-    List<User> findEligibleDonorsByBloodGroupBroadExcludingState(
-        @Param("bloodGroup") BloodGroup bloodGroup,
+    List<User> findEligibleDonorsByBloodGroupsBroadExcludingState(
+        @Param("bloodGroups") Collection<BloodGroup> bloodGroups,
         @Param("state") String state,
         @Param("cutoffDate") LocalDate cutoffDate,
         @Param("excludedUserId") Long excludedUserId
     );
+
+    default List<User> findEligibleDonorsByBloodGroupBroadExcludingState(
+            BloodGroup bloodGroup, String state, LocalDate cutoffDate, Long excludedUserId) {
+        return findEligibleDonorsByBloodGroupsBroadExcludingState(List.of(bloodGroup), state, cutoffDate, excludedUserId);
+    }
 
     /**
      * Paginated list of all active donors (for directory listings).

@@ -1,5 +1,7 @@
 package com.lifelink.service;
 
+import com.lifelink.config.MatchingMode;
+import com.lifelink.config.MatchingProperties;
 import com.lifelink.model.DonorProfile;
 import com.lifelink.model.Match;
 import com.lifelink.model.SeekerRequest;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -31,7 +34,8 @@ import java.util.Set;
  *
  * <p><h3>Location-Aware Three-Tier Matching Algorithm (Design Decision #8):</h3>
  * When a blood request is posted or matched, the system searches for available, eligible donors
- * having the exact matching blood group (Design Decision #15) in three progressive geographical tiers:
+ * having the exact matching blood group (Design Decision #15) or compatible red blood cell group
+ * (Phase 12 feature flag {@code lifelink.matching.mode}) in three progressive geographical tiers:
  * <ol>
  *   <li><b>Tier 1 (City-Level):</b> Search for eligible donors within the exact same city as the seeker.</li>
  *   <li><b>Tier 2 (State-Level):</b> If Tier 1 produces fewer than {@value #TARGET_MATCH_THRESHOLD} donors,
@@ -56,6 +60,7 @@ public class MatchingService {
     private final MatchRepository matchRepository;
     private final NotificationService notificationService;
     private final DonorService donorService;
+    private final MatchingProperties matchingProperties;
 
     /**
      * Executes the three-tier matching workflow for an open seeker request.
@@ -80,47 +85,24 @@ public class MatchingService {
         List<User> matchedDonors = new ArrayList<>();
         Set<Long> pickedDonorIds = new HashSet<>();
 
-        // Tier 1: Same blood group + exact same city
-        List<User> tier1Donors = userRepository.findEligibleDonorsByBloodGroupAndCity(
-                bloodGroup, city, cutoffDate, seekerId
-        );
-        for (User u : tier1Donors) {
-            if (pickedDonorIds.add(u.getId())) {
-                matchedDonors.add(u);
-            }
-        }
-        log.info("Tier 1 (City: {}) found {} eligible donors for request ID {}", city, tier1Donors.size(), request.getId());
+        // Phase 1: Search exact blood group matches in three tiers (City -> State -> Broad)
+        collectDonorsForGroups(List.of(bloodGroup), city, state, seekerId, cutoffDate, matchedDonors, pickedDonorIds);
+        log.info("Exact match search for request ID {} found {} donors", request.getId(), matchedDonors.size());
 
-        // Tier 2: If under TARGET_MATCH_THRESHOLD, expand to same state
-        if (matchedDonors.size() < TARGET_MATCH_THRESHOLD) {
-            List<User> tier2Donors = userRepository.findEligibleDonorsByBloodGroupAndStateExcludingCity(
-                    bloodGroup, state, city, cutoffDate, seekerId
-            );
-            for (User u : tier2Donors) {
-                if (pickedDonorIds.add(u.getId())) {
-                    matchedDonors.add(u);
-                    if (matchedDonors.size() >= TARGET_MATCH_THRESHOLD) {
-                        break;
-                    }
-                }
-            }
-            log.info("Tier 2 (State: {}) brought total donors to {} for request ID {}", state, matchedDonors.size(), request.getId());
-        }
+        // Phase 2: In COMPATIBLE mode, if under TARGET_MATCH_THRESHOLD, expand to compatible non-exact groups
+        MatchingMode mode = (matchingProperties != null && matchingProperties.getMode() != null)
+                ? matchingProperties.getMode() : MatchingMode.EXACT;
 
-        // Tier 3: If still under TARGET_MATCH_THRESHOLD, expand nationwide
-        if (matchedDonors.size() < TARGET_MATCH_THRESHOLD) {
-            List<User> tier3Donors = userRepository.findEligibleDonorsByBloodGroupBroadExcludingState(
-                    bloodGroup, state, cutoffDate, seekerId
-            );
-            for (User u : tier3Donors) {
-                if (pickedDonorIds.add(u.getId())) {
-                    matchedDonors.add(u);
-                    if (matchedDonors.size() >= TARGET_MATCH_THRESHOLD) {
-                        break;
-                    }
-                }
+        if (mode == MatchingMode.COMPATIBLE && matchedDonors.size() < TARGET_MATCH_THRESHOLD) {
+            List<BloodGroup> compatibleNonExact = BloodCompatibility.compatibleDonorsFor(bloodGroup)
+                    .stream()
+                    .filter(bg -> bg != bloodGroup)
+                    .toList();
+
+            if (!compatibleNonExact.isEmpty()) {
+                collectDonorsForGroups(compatibleNonExact, city, state, seekerId, cutoffDate, matchedDonors, pickedDonorIds);
+                log.info("Compatible mode expanded matches for request ID {} to {} donors", request.getId(), matchedDonors.size());
             }
-            log.info("Tier 3 (Nationwide) brought total donors to {} for request ID {}", matchedDonors.size(), request.getId());
         }
 
         // Persist matches and trigger email notifications
@@ -181,10 +163,20 @@ public class MatchingService {
             throw new InvalidRequestStateException("Donor is currently ineligible to donate (unavailable or interval < 90 days).");
         }
 
-        // Exact blood group check (Design Decision #15)
-        if (profile.getBloodGroup() != request.getBloodGroup()) {
-            throw new InvalidRequestStateException("Donor blood group (" + profile.getBloodGroup() +
-                    ") does not match request (" + request.getBloodGroup() + ").");
+        // Blood group compatibility check based on lifelink.matching.mode
+        MatchingMode mode = (matchingProperties != null && matchingProperties.getMode() != null)
+                ? matchingProperties.getMode() : MatchingMode.EXACT;
+
+        if (mode == MatchingMode.EXACT) {
+            if (profile.getBloodGroup() != request.getBloodGroup()) {
+                throw new InvalidRequestStateException("Donor blood group (" + profile.getBloodGroup() +
+                        ") does not match request (" + request.getBloodGroup() + ").");
+            }
+        } else {
+            if (!BloodCompatibility.isCompatible(profile.getBloodGroup(), request.getBloodGroup())) {
+                throw new InvalidRequestStateException("Donor blood group (" + profile.getBloodGroup() +
+                        ") is not medically compatible with request (" + request.getBloodGroup() + ").");
+            }
         }
 
         // Check if a match record already exists (e.g., from auto-matching)
@@ -243,5 +235,64 @@ public class MatchingService {
         log.info("[SECURITY_AUDIT] event=MATCH_DECLINED donorId={} requestId={} matchId={}",
                 donorUserId, requestId, saved.getId());
         return saved;
+    }
+
+    /**
+     * Queries donors for a specific collection of blood groups progressively across
+     * Tier 1 (City) -> Tier 2 (State) -> Tier 3 (Nationwide) until TARGET_MATCH_THRESHOLD is satisfied.
+     */
+    private void collectDonorsForGroups(Collection<BloodGroup> groups,
+                                       String city,
+                                       String state,
+                                       Long seekerId,
+                                       LocalDate cutoffDate,
+                                       List<User> matchedDonors,
+                                       Set<Long> pickedDonorIds) {
+        if (matchedDonors.size() >= TARGET_MATCH_THRESHOLD || groups.isEmpty()) {
+            return;
+        }
+
+        // Tier 1: Exact matching city
+        List<User> tier1Donors = userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                groups, city, cutoffDate, seekerId
+        );
+        for (User u : tier1Donors) {
+            if (pickedDonorIds.add(u.getId())) {
+                matchedDonors.add(u);
+                if (matchedDonors.size() >= TARGET_MATCH_THRESHOLD) {
+                    return;
+                }
+            }
+        }
+
+        // Tier 2: State level (excluding city)
+        if (matchedDonors.size() < TARGET_MATCH_THRESHOLD) {
+            List<User> tier2Donors = userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
+                    groups, state, city, cutoffDate, seekerId
+            );
+            for (User u : tier2Donors) {
+                if (pickedDonorIds.add(u.getId())) {
+                    matchedDonors.add(u);
+                    if (matchedDonors.size() >= TARGET_MATCH_THRESHOLD) {
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Tier 3: Nationwide (excluding state)
+        if (matchedDonors.size() < TARGET_MATCH_THRESHOLD) {
+            List<User> tier3Donors = userRepository.findEligibleDonorsByBloodGroupsBroadExcludingState(
+                    groups, state, cutoffDate, seekerId
+            );
+            for (User u : tier3Donors) {
+                if (pickedDonorIds.add(u.getId())) {
+                    matchedDonors.add(u);
+                    if (matchedDonors.size() >= TARGET_MATCH_THRESHOLD) {
+                        return;
+                    }
+                }
+            }
+        }
     }
 }

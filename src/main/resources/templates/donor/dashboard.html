@@ -97,6 +97,12 @@
                             <td>
                                 <strong th:text="${m.request.hospitalName}">Hospital Name</strong><br>
                                 <small style="color: var(--color-text-muted);" th:text="${m.request.hospitalAddress + ', ' + m.request.seeker.city}">Address, City</small>
+                                <div th:if="${m.compatibleOnlyMatch}" style="margin-top: 0.35rem;">
+                                    <span class="badge" style="background-color: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.75rem; white-space: normal; display: inline-block; text-align: left;"
+                                          th:text="'Compatible match: your ' + ${m.donor.donorProfile.bloodGroup.label} + ' blood can be used for an ' + ${m.request.bloodGroup.label} + ' request'">
+                                        Compatible match: your O- blood can be used for an A+ request
+                                    </span>
+                                </div>
                             </td>
                             <td><strong th:text="${m.request.unitsNeeded}">2</strong> unit(s)</td>
                             <td>

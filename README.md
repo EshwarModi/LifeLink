@@ -226,27 +226,21 @@ Sensitive authentication and privacy-critical transitions emit structured audit 
 
 ## 7. Known Limitations & Future Work
 
-### 7.1 Exact-Match Blood Group Logic (Design Decision #15)
-In the current implementation of LifeLink, donor-to-seeker matching uses **exact blood group equality** (`donor.bloodGroup == request.bloodGroup`).
+### 7.1 Matching Modes & ABO/Rh Compatibility (Phase 12 Feature Flag)
+LifeLink supports two configurable matching modes via `lifelink.matching.mode` (default: `EXACT`):
 
-#### Clinical Reality vs. Deliberate System Simplification:
-- In clinical transfusion medicine:
-  - **O-Negative (O-)** is the universal donor for packed red blood cells (compatible with all ABO and Rh types).
-  - **AB-Positive (AB+)** is the universal recipient for packed red blood cells (can safely receive blood from any ABO and Rh type).
-  - **Rh Positive (+) recipients** can safely receive both Rh Positive (+) and Rh Negative (-) blood from compatible ABO groups (e.g., an `A+` patient can receive `A+`, `A-`, `O+`, and `O-`).
-  - **Rh Negative (-) recipients** should only receive Rh Negative (-) units to avoid Rh immunization.
-- **Why LifeLink Uses Exact-Match Equality:**
-  - **Simplicity and Transparency**: Eliminates ambiguous clinical compatibility edge cases and keeps SQL queries deterministic and straightforward for interview and codebase auditability.
-  - **Preventing O- Depletion**: In non-trauma situations, hospitals prefer giving type-identical blood to preserve scarce O- inventory for true emergency trauma resuscitations.
-- **Path to Extension**:
-  A compatibility matrix can be cleanly plugged into `MatchingService` without requiring schema migrations:
-  ```java
-  public enum BloodGroup {
-      // Compatibility lookup returning set of acceptable donor groups for a recipient
-      public Set<BloodGroup> getCompatibleDonorGroups() { ... }
-  }
-  ```
-  The SQL queries in [`UserRepository`](file:///c:/yuvi/LifeLink/src/main/java/com/lifelink/repository/UserRepository.java) can then accept `Collection<BloodGroup> compatibleGroups` with an `IN (:compatibleGroups)` predicate.
+1. **`EXACT` Mode (Default):**
+   - Matching strictly pairs requests with donors of the identical blood group (`O+` to `O+`, `A-` to `A-`).
+   - Ensures deterministic queries, simplicity for codebase auditing, and preserves scarce universal supplies.
+2. **`COMPATIBLE` Mode (`lifelink.matching.mode=COMPATIBLE`):**
+   - Enables red blood cell (packed RBC) compatibility matching via [`BloodCompatibility`](file:///c:/yuvi/LifeLink/src/main/java/com/lifelink/service/BloodCompatibility.java).
+   - Candidate ranking: **Exact matches are always ranked first**, followed by compatible non-exact donors (e.g. `O-` for an `A+` request).
+   - Preserves location tier priority (City $\rightarrow$ State $\rightarrow$ Broad) within each blood group rank.
+   - Donors see a contextual badge in their dashboard: `Compatible match: your O- blood can be used for an A+ request`.
+
+> [!CAUTION]
+> **Medical & Transfusion Caveat:**
+> Compatibility in this platform covers **packed red blood cell (RBC) donation only**. Plasma and platelet donations follow inverse or different compatibility rules (e.g. AB is universal plasma donor, not O). Furthermore, final medical cross-matching and clinical donor screening are always performed directly by hospitals and certified blood banks, not by this software application.
 
 ### 7.2 Single-Node In-Memory Rate Limiting
 - The Bucket4j filter uses an in-memory `ConcurrentHashMap`. In a multi-instance horizontally scaled deployment behind a load balancer, rate limits should be backed by Redis (`bucket4j-redis`) to share token buckets across nodes.

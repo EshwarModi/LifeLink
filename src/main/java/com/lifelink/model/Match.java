@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -79,6 +80,14 @@ public class Match {
         if (this.status == null) {
             this.status = MatchStatus.PENDING;
         }
+    }
+
+    @Transient
+    public boolean isCompatibleOnlyMatch() {
+        if (donor == null || donor.getDonorProfile() == null || request == null || request.getBloodGroup() == null) {
+            return false;
+        }
+        return donor.getDonorProfile().getBloodGroup() != request.getBloodGroup();
     }
 
     @Override
