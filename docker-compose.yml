@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mysql:
     image: mysql:8.0
@@ -35,7 +33,7 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       DB_NAME: lifelink
-      DB_USERNAME: lifelink
+      DB_USER: lifelink
       DB_PASSWORD: lifelink_secret
       FLYWAY_ENABLED: "true"
       ADMIN_USERNAME: admin

@@ -115,6 +115,16 @@ Requires Docker Desktop or Docker Engine with Docker Compose.
    docker compose down
    ```
 
+#### Docker Compose Environment Variable Mapping
+
+| Application Variable (`app`) | MySQL Variable (`mysql`) | Value in `docker-compose.yml` | Fallback in `application.properties` |
+|------------------------------|--------------------------|--------------------------------|--------------------------------------|
+| `DB_HOST`                    | *(Service hostname)*     | `mysql`                        | `localhost`                          |
+| `DB_PORT`                    | *(MySQL Port)*           | `3306`                         | `3306`                               |
+| `DB_NAME`                    | `MYSQL_DATABASE`         | `lifelink`                     | `lifelink`                           |
+| `DB_USER`                    | `MYSQL_USER`             | `lifelink`                     | `root`                               |
+| `DB_PASSWORD`                | `MYSQL_PASSWORD`         | `lifelink_secret`              | `root`                               |
+
 ---
 
 ### Option B: Running Locally with Maven & Local MySQL
@@ -134,7 +144,7 @@ CREATE DATABASE IF NOT EXISTS lifelink CHARACTER SET utf8mb4 COLLATE utf8mb4_uni
 $env:DB_HOST="localhost"
 $env:DB_PORT="3306"
 $env:DB_NAME="lifelink"
-$env:DB_USERNAME="root"
+$env:DB_USER="root"
 $env:DB_PASSWORD="your_mysql_password"
 $env:ADMIN_USERNAME="admin"
 $env:ADMIN_PASSWORD="Admin@12345"
