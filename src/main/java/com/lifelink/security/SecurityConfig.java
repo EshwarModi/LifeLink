@@ -1,8 +1,11 @@
 package com.lifelink.security;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -11,7 +14,13 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandlerImpl;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.util.matcher.AnyRequestMatcher;
+
+import java.nio.charset.StandardCharsets;
 
 /**
  * Spring Security configuration for the LifeLink platform.
@@ -22,7 +31,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  *   <li><b>Session Fixation Protection:</b> Enforces session migration on authentication (Design Decision #2).</li>
  *   <li><b>Password Hashing:</b> BCryptPasswordEncoder with strength factor 12 (Design Decision #3).</li>
  *   <li><b>Rate Limiting:</b> Bucket4j filter before UsernamePasswordAuthenticationFilter for POST /login and POST /register (Design Decision #4).</li>
- *   <li><b>Strict Role Separation:</b> /admin/** restricted to ROLE_ADMIN, /seeker/** restricted to ROLE_SEEKER, /donor/** restricted to ROLE_DONOR.</li>
+ *   <li><b>Strict Role Separation:</b> /admin/** restricted to ROLE_ADMIN, /seeker/** restricted to ROLE_SEEKER, /donor/** restricted to ROLE_DONOR,
+ *       GET /api/donors restricted to ROLE_SEEKER or ROLE_ADMIN, GET /api/requests restricted to authenticated users.</li>
  * </ul>
  * </p>
  */
@@ -55,12 +65,11 @@ public class SecurityConfig {
 
             // 2. Authorization Rules
             .authorizeHttpRequests(auth -> auth
-                // Public routes: Home, Login, Register, API, Actuator Health, Error, and Static Assets
+                // Public routes: Home, Login, Register, Actuator Health, Error, and Static Assets
                 .requestMatchers(
                     "/",
                     "/login",
                     "/register",
-                    "/api/**",
                     "/actuator/**",
                     "/error",
                     "/css/**",
@@ -69,6 +78,11 @@ public class SecurityConfig {
                     "/webjars/**",
                     "/favicon.ico"
                 ).permitAll()
+
+                // REST API authorization rules
+                .requestMatchers(HttpMethod.GET, "/api/requests").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/donors").hasAnyRole("SEEKER", "ADMIN")
+                .requestMatchers("/api/**").authenticated()
 
                 // Admin-only management endpoints
                 .requestMatchers("/admin/**").hasRole("ADMIN")
@@ -93,7 +107,37 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
 
-            // 3. Form Login Configuration
+            // 3. Exception Handling: JSON 401 & 403 for /api/**, standard HTML redirect/error for web pages
+            .exceptionHandling(ex -> ex
+                .defaultAuthenticationEntryPointFor(
+                    (request, response, authException) -> {
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                        response.getWriter().write("{\"error\":\"Authentication required\"}");
+                    },
+                    new AntPathRequestMatcher("/api/**")
+                )
+                .defaultAuthenticationEntryPointFor(
+                    new LoginUrlAuthenticationEntryPoint("/login"),
+                    AnyRequestMatcher.INSTANCE
+                )
+                .defaultAccessDeniedHandlerFor(
+                    (request, response, accessDeniedException) -> {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+                        response.getWriter().write("{\"error\":\"Access denied\"}");
+                    },
+                    new AntPathRequestMatcher("/api/**")
+                )
+                .defaultAccessDeniedHandlerFor(
+                    new AccessDeniedHandlerImpl(),
+                    AnyRequestMatcher.INSTANCE
+                )
+            )
+
+            // 4. Form Login Configuration
             .formLogin(form -> form
                 .loginPage("/login")
                 .loginProcessingUrl("/login")
@@ -102,7 +146,7 @@ public class SecurityConfig {
                 .permitAll()
             )
 
-            // 4. Logout Configuration
+            // 5. Logout Configuration
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/login?logout=true")
@@ -111,12 +155,12 @@ public class SecurityConfig {
                 .permitAll()
             )
 
-            // 5. Session Fixation Protection (Spring default is migrateSession)
+            // 6. Session Fixation Protection (Spring default is migrateSession)
             .sessionManagement(session -> session
                 .sessionFixation(sf -> sf.migrateSession())
             )
 
-            // 6. UserDetailsService
+            // 7. UserDetailsService
             .userDetailsService(userDetailsService);
 
             // CSRF protection remains enabled by default; never disabled.

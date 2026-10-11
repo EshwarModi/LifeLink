@@ -243,6 +243,7 @@ class ControllersIntegrationTest {
                 .build());
 
         mockMvc.perform(get("/api/requests")
+                        .with(user(donorDetails))
                         .param("page", "0")
                         .param("size", "10")
                         .accept(MediaType.APPLICATION_JSON))
@@ -253,9 +254,10 @@ class ControllersIntegrationTest {
     }
 
     @Test
-    @DisplayName("ApiController: GET /api/donors returns paginated JSON without phone numbers")
+    @DisplayName("ApiController: GET /api/donors returns paginated JSON without phone numbers for ROLE_SEEKER")
     void testApiDonorsEndpoint() throws Exception {
         mockMvc.perform(get("/api/donors")
+                        .with(user(seekerDetails))
                         .param("bloodGroup", "O_POSITIVE")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())

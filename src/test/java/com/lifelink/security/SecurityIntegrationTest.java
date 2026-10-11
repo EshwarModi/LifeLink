@@ -9,19 +9,24 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -60,11 +65,69 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("Public routes (/login, /register) are accessible without authentication")
+    @DisplayName("Public routes (/, /login, /register) are accessible without authentication")
     void testPublicRoutesAccessible() throws Exception {
-        // Without controllers yet, /login view is handled by Spring Security form login
+        mockMvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("index"))
+                .andExpect(model().attributeExists("totalDonors", "totalRequests", "fulfilledRequests"));
+
         mockMvc.perform(get("/login"))
                 .andExpect(status().isOk());
+
+        mockMvc.perform(get("/register"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("Anonymous GET /api/donors and /api/requests return HTTP 401 JSON instead of HTML login redirect")
+    void testAnonymousApiCallsReturn401Json() throws Exception {
+        mockMvc.perform(get("/api/donors"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error", is("Authentication required")));
+
+        mockMvc.perform(get("/api/requests"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error", is("Authentication required")));
+    }
+
+    @Test
+    @WithMockUser(username = "donor_user", roles = {"DONOR"})
+    @DisplayName("ROLE_DONOR on GET /api/donors returns HTTP 403 JSON")
+    void testDonorForbiddenOnApiDonorsReturns403Json() throws Exception {
+        mockMvc.perform(get("/api/donors"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error", is("Access denied")));
+    }
+
+    @Test
+    @WithMockUser(username = "seeker_user", roles = {"SEEKER"})
+    @DisplayName("ROLE_SEEKER on GET /api/donors returns HTTP 200")
+    void testSeekerAllowedOnApiDonors() throws Exception {
+        mockMvc.perform(get("/api/donors"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    @WithMockUser(username = "admin_user", roles = {"ADMIN"})
+    @DisplayName("ROLE_ADMIN on GET /api/donors returns HTTP 200")
+    void testAdminAllowedOnApiDonors() throws Exception {
+        mockMvc.perform(get("/api/donors"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    @WithMockUser(username = "donor_user", roles = {"DONOR"})
+    @DisplayName("ROLE_DONOR on GET /api/requests returns HTTP 200")
+    void testDonorAllowedOnApiRequests() throws Exception {
+        mockMvc.perform(get("/api/requests"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
     }
 
     @Test
