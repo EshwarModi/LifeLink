@@ -217,10 +217,18 @@ public class MatchingService {
                 throw new UnauthorizedActionException("You are not authorized to accept a match for another donor.");
             }
 
+            // State machine check before any state mutation
+            MatchStatus currentStatus = match.getStatus();
+            MatchStatus.validateTransition(currentStatus, MatchStatus.ACCEPTED);
+            if (currentStatus.isIdempotentNoOp(MatchStatus.ACCEPTED)) {
+                return match;
+            }
+
             match.setStatus(MatchStatus.ACCEPTED);
             match.setContactShared(true);
         } else {
-            // Upsert: Create brand new accepted match
+            // Upsert: (no match row) -> ACCEPTED
+            MatchStatus.validateTransition(null, MatchStatus.ACCEPTED);
             match = Match.builder()
                     .request(request)
                     .donor(donor)
@@ -237,7 +245,7 @@ public class MatchingService {
     }
 
     /**
-     * Declines a pending match with donor ownership verification.
+     * Declines a pending match with donor ownership and state machine verification.
      *
      * @param requestId ID of the seeker request
      * @param donorUserId ID of the authenticated donor user
@@ -252,6 +260,13 @@ public class MatchingService {
         // Ownership check
         if (!match.getDonor().getId().equals(donorUserId)) {
             throw new UnauthorizedActionException("You cannot decline a match assigned to another donor.");
+        }
+
+        // State machine check before any state mutation
+        MatchStatus currentStatus = match.getStatus();
+        MatchStatus.validateTransition(currentStatus, MatchStatus.DECLINED);
+        if (currentStatus.isIdempotentNoOp(MatchStatus.DECLINED)) {
+            return match;
         }
 
         match.setStatus(MatchStatus.DECLINED);

@@ -247,6 +247,38 @@ class MockMvcFlowAndCsrfIntegrationTest {
         assertThat(acceptedMatch.get().isContactShared()).isTrue();
     }
 
+    @Test
+    @DisplayName("MockMvc Accept Match: Attempting to accept an EXPIRED match returns HTTP 409 Conflict and contactShared stays false")
+    void testAcceptExpiredMatch_Returns409AndContactSharedStaysFalse() throws Exception {
+        SeekerRequest request = seekerRequestRepository.save(SeekerRequest.builder()
+                .seeker(existingSeeker)
+                .bloodGroup(BloodGroup.O_POSITIVE)
+                .unitsNeeded(1)
+                .urgency(Urgency.HIGH)
+                .reason("Scheduled surgery")
+                .hospitalName("Fortis Hospital")
+                .hospitalAddress("Bannerghatta Road, Bengaluru")
+                .requiredBy(LocalDate.now().plusDays(4))
+                .status(RequestStatus.OPEN)
+                .build());
+
+        Match expiredMatch = matchRepository.save(Match.builder()
+                .request(request)
+                .donor(existingDonor)
+                .status(MatchStatus.EXPIRED)
+                .contactShared(false)
+                .build());
+
+        mockMvc.perform(post("/matches/" + request.getId() + "/accept")
+                        .with(csrf())
+                        .with(user(donorDetails)))
+                .andExpect(status().isConflict());
+
+        Match reloaded = matchRepository.findById(expiredMatch.getId()).orElseThrow();
+        assertThat(reloaded.getStatus()).isEqualTo(MatchStatus.EXPIRED);
+        assertThat(reloaded.isContactShared()).isFalse();
+    }
+
     // =========================================================================
     // 5. CSRF Protection Rejection (Design Decision #1: CSRF ON everywhere)
     // =========================================================================

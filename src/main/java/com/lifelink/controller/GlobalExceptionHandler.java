@@ -51,7 +51,20 @@ public class GlobalExceptionHandler {
         return "error/403";
     }
 
-    @ExceptionHandler({InvalidRequestStateException.class, IllegalArgumentException.class, DuplicateResourceException.class})
+    @ExceptionHandler(InvalidRequestStateException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public Object handleConflict(InvalidRequestStateException ex, HttpServletRequest request, Model model) {
+        log.warn("State conflict at {}: {}", request.getRequestURI(), ex.getMessage());
+        if (isApiRequest(request)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(buildApiError(HttpStatus.CONFLICT, ex.getMessage()));
+        }
+        model.addAttribute("status", 409);
+        model.addAttribute("error", "Action No Longer Available");
+        model.addAttribute("message", ex.getMessage());
+        return "error/409";
+    }
+
+    @ExceptionHandler({IllegalArgumentException.class, DuplicateResourceException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Object handleBadRequest(Exception ex, HttpServletRequest request, Model model) {
         log.warn("Bad request at {}: {}", request.getRequestURI(), ex.getMessage());

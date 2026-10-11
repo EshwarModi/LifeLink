@@ -1,5 +1,8 @@
 package com.lifelink.service;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.lifelink.config.MatchingMode;
 import com.lifelink.config.MatchingProperties;
 import com.lifelink.model.DonorProfile;
@@ -20,10 +23,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
@@ -31,6 +38,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -675,5 +683,171 @@ class MatchingServiceUnitTest {
         assertThat(declined.getStatus()).isEqualTo(MatchStatus.DECLINED);
         assertThat(declined.isContactShared()).isFalse();
         verify(matchRepository).save(match);
+    }
+
+    // =========================================================================
+    // Match State Machine Table-Driven Tests
+    // =========================================================================
+
+    static Stream<Arguments> matchStateTransitionMatrix() {
+        return Stream.of(
+                // (from, to, allowed, idempotentNoOp, expectedAuditLogs)
+                Arguments.of(null, MatchStatus.ACCEPTED, true, false, 1),
+                Arguments.of(MatchStatus.PENDING, MatchStatus.ACCEPTED, true, false, 1),
+                Arguments.of(MatchStatus.PENDING, MatchStatus.DECLINED, true, false, 1),
+                Arguments.of(MatchStatus.DECLINED, MatchStatus.ACCEPTED, true, false, 1),
+                Arguments.of(MatchStatus.ACCEPTED, MatchStatus.ACCEPTED, true, true, 0),
+                Arguments.of(MatchStatus.DECLINED, MatchStatus.DECLINED, true, true, 0),
+                Arguments.of(MatchStatus.ACCEPTED, MatchStatus.DECLINED, false, false, 0),
+                Arguments.of(MatchStatus.EXPIRED, MatchStatus.ACCEPTED, false, false, 0),
+                Arguments.of(MatchStatus.EXPIRED, MatchStatus.DECLINED, false, false, 0),
+                Arguments.of(MatchStatus.EXPIRED, MatchStatus.PENDING, false, false, 0),
+                Arguments.of(MatchStatus.EXPIRED, MatchStatus.EXPIRED, false, false, 0)
+        );
+    }
+
+    @ParameterizedTest(name = "State Machine [{index}]: {0} -> {1} (allowed={2}, idempotent={3}, auditLogs={4})")
+    @MethodSource("matchStateTransitionMatrix")
+    @DisplayName("State Machine: Table-driven verification of all (from, to) transitions, idempotency, and audit logging")
+    void testMatchStateMachineTransitions(
+            MatchStatus from,
+            MatchStatus to,
+            boolean allowed,
+            boolean idempotentNoOp,
+            int expectedAuditLogs) {
+
+        // 1. Verify MatchStatus.validateTransition directly
+        if (!allowed) {
+            assertThatThrownBy(() -> MatchStatus.validateTransition(from, to))
+                    .isInstanceOf(InvalidRequestStateException.class);
+        } else {
+            MatchStatus.validateTransition(from, to);
+            if (from != null) {
+                assertThat(from.isIdempotentNoOp(to)).isEqualTo(idempotentNoOp);
+            }
+        }
+
+        // 2. For service-level actions (ACCEPTED via acceptMatch, DECLINED via declineMatch), verify full behavior & audit log count
+        if (to != MatchStatus.ACCEPTED && to != MatchStatus.DECLINED) {
+            return;
+        }
+
+        Logger logger = (Logger) LoggerFactory.getLogger(MatchingService.class);
+        ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+        listAppender.start();
+        logger.addAppender(listAppender);
+
+        try {
+            DonorProfile profile = DonorProfile.builder()
+                    .bloodGroup(BloodGroup.O_POSITIVE)
+                    .availableToDonate(true)
+                    .build();
+            User callerDonor = User.builder().id(77L).username("caller_donor").donorProfile(profile).build();
+
+            Match existingMatch = (from == null) ? null : Match.builder()
+                    .id(700L)
+                    .request(openRequest)
+                    .donor(callerDonor)
+                    .status(from)
+                    .contactShared(from == MatchStatus.ACCEPTED)
+                    .build();
+
+            if (to == MatchStatus.ACCEPTED) {
+                when(seekerRequestRepository.findById(100L)).thenReturn(Optional.of(openRequest));
+                when(userRepository.findById(77L)).thenReturn(Optional.of(callerDonor));
+                when(donorService.isDonorEligible(profile)).thenReturn(true);
+            }
+            when(matchRepository.findByRequestIdAndDonorId(100L, 77L))
+                    .thenReturn(Optional.ofNullable(existingMatch));
+
+            if (allowed && !idempotentNoOp) {
+                when(matchRepository.save(any(Match.class))).thenAnswer(i -> i.getArgument(0));
+            }
+
+            if (allowed) {
+                Match result = (to == MatchStatus.ACCEPTED)
+                        ? matchingService.acceptMatch(100L, 77L)
+                        : matchingService.declineMatch(100L, 77L);
+
+                assertThat(result.getStatus()).isEqualTo(to);
+                assertThat(result.isContactShared()).isEqualTo(to == MatchStatus.ACCEPTED);
+
+                if (idempotentNoOp) {
+                    verify(matchRepository, never()).save(any(Match.class));
+                } else {
+                    verify(matchRepository, times(1)).save(any(Match.class));
+                }
+            } else {
+                boolean initialContactShared = existingMatch != null && existingMatch.isContactShared();
+                assertThatThrownBy(() -> {
+                    if (to == MatchStatus.ACCEPTED) {
+                        matchingService.acceptMatch(100L, 77L);
+                    } else {
+                        matchingService.declineMatch(100L, 77L);
+                    }
+                }).isInstanceOf(InvalidRequestStateException.class);
+
+                verify(matchRepository, never()).save(any(Match.class));
+                if (existingMatch != null) {
+                    assertThat(existingMatch.getStatus()).isEqualTo(from);
+                    assertThat(existingMatch.isContactShared()).isEqualTo(initialContactShared);
+                }
+            }
+
+            long auditLogCount = listAppender.list.stream()
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .filter(msg -> msg.contains("[SECURITY_AUDIT]"))
+                    .count();
+            assertThat(auditLogCount).isEqualTo(expectedAuditLogs);
+        } finally {
+            logger.detachAppender(listAppender);
+        }
+    }
+
+    @Test
+    @DisplayName("State Machine Idempotency: Calling acceptMatch twice on a PENDING match writes [SECURITY_AUDIT] log only once")
+    void testAcceptMatch_RepeatedCalls_WritesAuditLogOnlyOnce() {
+        Logger logger = (Logger) LoggerFactory.getLogger(MatchingService.class);
+        ListAppender<ILoggingEvent> listAppender = new ListAppender<>();
+        listAppender.start();
+        logger.addAppender(listAppender);
+
+        try {
+            DonorProfile profile = DonorProfile.builder()
+                    .bloodGroup(BloodGroup.O_POSITIVE)
+                    .availableToDonate(true)
+                    .build();
+            User callerDonor = User.builder().id(77L).username("caller_donor").donorProfile(profile).build();
+            Match match = Match.builder()
+                    .id(701L)
+                    .request(openRequest)
+                    .donor(callerDonor)
+                    .status(MatchStatus.PENDING)
+                    .contactShared(false)
+                    .build();
+
+            when(seekerRequestRepository.findById(100L)).thenReturn(Optional.of(openRequest));
+            when(userRepository.findById(77L)).thenReturn(Optional.of(callerDonor));
+            when(donorService.isDonorEligible(profile)).thenReturn(true);
+            when(matchRepository.findByRequestIdAndDonorId(100L, 77L)).thenReturn(Optional.of(match));
+            when(matchRepository.save(any(Match.class))).thenAnswer(i -> i.getArgument(0));
+
+            // First call: PENDING -> ACCEPTED
+            Match first = matchingService.acceptMatch(100L, 77L);
+            // Second call: ACCEPTED -> ACCEPTED (idempotent no-op)
+            Match second = matchingService.acceptMatch(100L, 77L);
+
+            assertThat(first.getStatus()).isEqualTo(MatchStatus.ACCEPTED);
+            assertThat(second.getStatus()).isEqualTo(MatchStatus.ACCEPTED);
+            verify(matchRepository, times(1)).save(match);
+
+            long auditLogCount = listAppender.list.stream()
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .filter(msg -> msg.contains("[SECURITY_AUDIT] event=MATCH_ACCEPTED"))
+                    .count();
+            assertThat(auditLogCount).isEqualTo(1L);
+        } finally {
+            logger.detachAppender(listAppender);
+        }
     }
 }
