@@ -100,30 +100,37 @@ flowchart TD
 
 Requires Docker Desktop or Docker Engine with Docker Compose.
 
-1. **Build and start the complete stack (App + MySQL):**
+1. **Create your `.env` file from the template and set strong secrets:**
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` to set `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `DB_PASSWORD` (matching `MYSQL_PASSWORD`), and `ADMIN_PASSWORD` (must be at least 8 characters with uppercase, lowercase, and a digit). `docker-compose.yml` uses `${VAR:?message}` checks and will refuse to start if any required secret is missing.
+
+2. **Build and start the complete stack (App + MySQL):**
    ```bash
    docker compose up --build
    ```
 
-2. **Access the application:**
+3. **Access the application:**
    - Web Platform: [http://localhost:8080](http://localhost:8080)
    - Health Probe: [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
-   - Seeded Admin: `admin` / `Admin@12345` (redirects to `/admin/dashboard`)
+   - Seeded Admin: `admin` / `<your ADMIN_PASSWORD from .env>` (redirects to `/admin/dashboard`)
 
-3. **Stop the stack:**
+4. **Stop the stack:**
    ```bash
    docker compose down
    ```
 
 #### Docker Compose Environment Variable Mapping
 
-| Application Variable (`app`) | MySQL Variable (`mysql`) | Value in `docker-compose.yml` | Fallback in `application.properties` |
-|------------------------------|--------------------------|--------------------------------|--------------------------------------|
-| `DB_HOST`                    | *(Service hostname)*     | `mysql`                        | `localhost`                          |
-| `DB_PORT`                    | *(MySQL Port)*           | `3306`                         | `3306`                               |
-| `DB_NAME`                    | `MYSQL_DATABASE`         | `lifelink`                     | `lifelink`                           |
-| `DB_USER`                    | `MYSQL_USER`             | `lifelink`                     | `root`                               |
-| `DB_PASSWORD`                | `MYSQL_PASSWORD`         | `lifelink_secret`              | `root`                               |
+| Application Variable (`app`) | MySQL Variable (`mysql`) | Source in `docker-compose.yml`               | Default in `application.properties` |
+|------------------------------|--------------------------|----------------------------------------------|-------------------------------------|
+| `DB_HOST`                    | *(Service hostname)*     | `mysql`                                      | `localhost`                         |
+| `DB_PORT`                    | *(MySQL Port)*           | `3306`                                       | `3306`                              |
+| `DB_NAME`                    | `MYSQL_DATABASE`         | `${DB_NAME:-lifelink}`                       | `lifelink`                          |
+| `DB_USER`                    | `MYSQL_USER`             | `${DB_USER:-lifelink}`                       | *(none — required unless `dev`)*    |
+| `DB_PASSWORD`                | `MYSQL_PASSWORD`         | `${DB_PASSWORD:?...}` / `${MYSQL_PASSWORD:?...}` | *(none — required unless `dev`)* |
+| `ADMIN_PASSWORD`             | *(N/A)*                  | `${ADMIN_PASSWORD:?...}`                     | *(none — required unless `dev`)*    |
 
 ---
 
@@ -139,7 +146,16 @@ Requires Docker Desktop or Docker Engine with Docker Compose.
 CREATE DATABASE IF NOT EXISTS lifelink CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-#### 3. Configure Environment Variables (PowerShell example)
+#### 3. Run with the Local `dev` Profile (Quickest for Local Development)
+[`application-dev.properties`](file:///c:/yuvi/LifeLink/src/main/resources/application-dev.properties) provides convenient local defaults (`root`/`root` for MySQL and a default dev admin password) and is activated **only** when `SPRING_PROFILES_ACTIVE=dev`:
+```powershell
+$env:SPRING_PROFILES_ACTIVE="dev"
+mvn spring-boot:run
+```
+*(Or directly via Maven: `mvn spring-boot:run "-Dspring-boot.run.profiles=dev"`)*
+
+#### 4. Or Run with Explicit Environment Variables (Production-like)
+Without the `dev` profile, `DB_USER`, `DB_PASSWORD`, and `ADMIN_PASSWORD` have no fallback defaults and must be provided explicitly:
 ```powershell
 $env:DB_HOST="localhost"
 $env:DB_PORT="3306"
@@ -147,12 +163,8 @@ $env:DB_NAME="lifelink"
 $env:DB_USER="root"
 $env:DB_PASSWORD="your_mysql_password"
 $env:ADMIN_USERNAME="admin"
-$env:ADMIN_PASSWORD="Admin@12345"
+$env:ADMIN_PASSWORD="YourStrongAdminPassword1"
 $env:ADMIN_EMAIL="admin@lifelink.org"
-```
-
-#### 4. Run the Application
-```powershell
 mvn spring-boot:run
 ```
 Flyway automatically executes [`V1__init.sql`](file:///c:/yuvi/LifeLink/src/main/resources/db/migration/V1__init.sql), verifies schema tables, and starts the web server on port 8080.

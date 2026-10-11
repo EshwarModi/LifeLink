@@ -4,16 +4,16 @@ services:
     container_name: lifelink-mysql
     restart: unless-stopped
     environment:
-      MYSQL_DATABASE: lifelink
-      MYSQL_USER: lifelink
-      MYSQL_PASSWORD: lifelink_secret
-      MYSQL_ROOT_PASSWORD: root_secret
+      MYSQL_DATABASE: ${DB_NAME:-lifelink}
+      MYSQL_USER: ${DB_USER:-lifelink}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secret"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,13 +32,13 @@ services:
     environment:
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_NAME: lifelink
-      DB_USER: lifelink
-      DB_PASSWORD: lifelink_secret
+      DB_NAME: ${DB_NAME:-lifelink}
+      DB_USER: ${DB_USER:-lifelink}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       FLYWAY_ENABLED: "true"
-      ADMIN_USERNAME: admin
-      ADMIN_EMAIL: admin@lifelink.org
-      ADMIN_PASSWORD: Admin@12345
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@lifelink.org}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set in .env}
       ADMIN_FULL_NAME: "System Administrator"
       ADMIN_PHONE: "+919876543210"
       ADMIN_CITY: "Bengaluru"

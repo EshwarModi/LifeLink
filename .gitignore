@@ -39,3 +39,6 @@ Thumbs.db
 ### Application Logs ###
 *.log
 logs/
+
+### Environment Secrets ###
+.env
