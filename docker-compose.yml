@@ -6,7 +6,7 @@ services:
     environment:
       MYSQL_DATABASE: ${DB_NAME:-lifelink}
       MYSQL_USER: ${DB_USER:-lifelink}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD must be set in .env}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}
     ports:
       - "3306:3306"

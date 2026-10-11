@@ -104,7 +104,9 @@ Requires Docker Desktop or Docker Engine with Docker Compose.
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` to set `MYSQL_ROOT_PASSWORD`, `MYSQL_PASSWORD`, `DB_PASSWORD` (matching `MYSQL_PASSWORD`), and `ADMIN_PASSWORD` (must be at least 8 characters with uppercase, lowercase, and a digit). `docker-compose.yml` uses `${VAR:?message}` checks and will refuse to start if any required secret is missing.
+   Edit `.env` to set `MYSQL_ROOT_PASSWORD`, `DB_PASSWORD`, and `ADMIN_PASSWORD` (must be at least 8 characters with uppercase, lowercase, and a digit). The `mysql` service automatically derives its database name, app user, and app password from `DB_NAME`, `DB_USER`, and `DB_PASSWORD`. `docker-compose.yml` uses `${VAR:?message}` checks and will refuse to start if any required secret is missing.
+
+   > **Note:** If a password contains `"$"` or other shell-special characters, wrap the value in single quotes in `.env`, for example `DB_PASSWORD='my$pass'`.
 
 2. **Build and start the complete stack (App + MySQL):**
    ```bash
@@ -123,14 +125,15 @@ Requires Docker Desktop or Docker Engine with Docker Compose.
 
 #### Docker Compose Environment Variable Mapping
 
-| Application Variable (`app`) | MySQL Variable (`mysql`) | Source in `docker-compose.yml`               | Default in `application.properties` |
-|------------------------------|--------------------------|----------------------------------------------|-------------------------------------|
-| `DB_HOST`                    | *(Service hostname)*     | `mysql`                                      | `localhost`                         |
-| `DB_PORT`                    | *(MySQL Port)*           | `3306`                                       | `3306`                              |
-| `DB_NAME`                    | `MYSQL_DATABASE`         | `${DB_NAME:-lifelink}`                       | `lifelink`                          |
-| `DB_USER`                    | `MYSQL_USER`             | `${DB_USER:-lifelink}`                       | *(none — required unless `dev`)*    |
-| `DB_PASSWORD`                | `MYSQL_PASSWORD`         | `${DB_PASSWORD:?...}` / `${MYSQL_PASSWORD:?...}` | *(none — required unless `dev`)* |
-| `ADMIN_PASSWORD`             | *(N/A)*                  | `${ADMIN_PASSWORD:?...}`                     | *(none — required unless `dev`)*    |
+| `.env` / Application Variable | Used By (`app` / `mysql`) | Expression in `docker-compose.yml`                          | Default in `application.properties` |
+|-------------------------------|---------------------------|-------------------------------------------------------------|-------------------------------------|
+| `DB_HOST`                     | `app`                     | `mysql`                                                     | `localhost`                         |
+| `DB_PORT`                     | `app`                     | `3306`                                                      | `3306`                              |
+| `DB_NAME`                     | `app` & `mysql`           | `${DB_NAME:-lifelink}`                                      | `lifelink`                          |
+| `DB_USER`                     | `app` & `mysql`           | `${DB_USER:-lifelink}`                                      | *(none — required unless `dev`)*    |
+| `DB_PASSWORD`                 | `app` & `mysql`           | `${DB_PASSWORD:?DB_PASSWORD must be set in .env}`           | *(none — required unless `dev`)*    |
+| `MYSQL_ROOT_PASSWORD`         | `mysql`                   | `${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD must be set in .env}` | *(N/A — MySQL container root only)* |
+| `ADMIN_PASSWORD`              | `app`                     | `${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set in .env}`     | *(none — required unless `dev`)*    |
 
 ---
 
@@ -147,7 +150,7 @@ CREATE DATABASE IF NOT EXISTS lifelink CHARACTER SET utf8mb4 COLLATE utf8mb4_uni
 ```
 
 #### 3. Run with the Local `dev` Profile (Quickest for Local Development)
-[`application-dev.properties`](file:///c:/yuvi/LifeLink/src/main/resources/application-dev.properties) provides convenient local defaults (`root`/`root` for MySQL and a default dev admin password) and is activated **only** when `SPRING_PROFILES_ACTIVE=dev`:
+[`application-dev.properties`](src/main/resources/application-dev.properties) provides convenient local defaults (`root`/`root` for MySQL and a default dev admin password) and is activated **only** when `SPRING_PROFILES_ACTIVE=dev`:
 ```powershell
 $env:SPRING_PROFILES_ACTIVE="dev"
 mvn spring-boot:run
@@ -161,13 +164,13 @@ $env:DB_HOST="localhost"
 $env:DB_PORT="3306"
 $env:DB_NAME="lifelink"
 $env:DB_USER="root"
-$env:DB_PASSWORD="your_mysql_password"
+$env:DB_PASSWORD="your_db_password"
 $env:ADMIN_USERNAME="admin"
 $env:ADMIN_PASSWORD="YourStrongAdminPassword1"
 $env:ADMIN_EMAIL="admin@lifelink.org"
 mvn spring-boot:run
 ```
-Flyway automatically executes [`V1__init.sql`](file:///c:/yuvi/LifeLink/src/main/resources/db/migration/V1__init.sql), verifies schema tables, and starts the web server on port 8080.
+Flyway automatically executes [`V1__init.sql`](src/main/resources/db/migration/V1__init.sql), verifies schema tables, and starts the web server on port 8080.
 
 ---
 
@@ -264,10 +267,10 @@ LifeLink supports two configurable matching modes via `lifelink.matching.mode` (
 1. **`EXACT` Mode is the Default:**
    - Out of the box, matching pairs requests only with donors of the identical blood group (`O+` to `O+`, `A-` to `A-`) to preserve universal donor (`O-`) supplies unless `lifelink.matching.mode=COMPATIBLE` is explicitly enabled.
 2. **Packed Red Blood Cells (RBC) Only:**
-   - When `COMPATIBLE` mode is enabled via [`BloodCompatibility`](file:///c:/yuvi/LifeLink/src/main/java/com/lifelink/service/BloodCompatibility.java), compatibility rules model **packed red blood cell (RBC)** transfusion only. Plasma and platelet donations follow different compatibility rules, and clinical cross-matching is always performed by the hospital or blood bank.
+   - When `COMPATIBLE` mode is enabled via [`BloodCompatibility`](src/main/java/com/lifelink/service/BloodCompatibility.java), compatibility rules model **packed red blood cell (RBC)** transfusion only. Plasma and platelet donations follow different compatibility rules, and clinical cross-matching is always performed by the hospital or blood bank.
 
 ### 7.2 Single-Node In-Memory Rate Limiting
-- [`RateLimitingFilter`](file:///c:/yuvi/LifeLink/src/main/java/com/lifelink/security/RateLimitingFilter.java) stores per-IP token buckets in bounded local **Caffeine caches** (`expireAfterAccess = 10m`, `maximumSize = 10,000`) and ignores `X-Forwarded-For` unless `lifelink.rate-limit.trust-forwarded-headers=true` is explicitly enabled behind a trusted reverse proxy.
+- [`RateLimitingFilter`](src/main/java/com/lifelink/security/RateLimitingFilter.java) stores per-IP token buckets in bounded local **Caffeine caches** (`expireAfterAccess = 10m`, `maximumSize = 10,000`) and ignores `X-Forwarded-For` unless `lifelink.rate-limit.trust-forwarded-headers=true` is explicitly enabled behind a trusted reverse proxy.
 - Because the cache resides in local JVM memory, rate-limit counters are **per application node** and are not shared across horizontally scaled instances (a multi-node deployment would require a distributed backing store such as Redis).
 
 ### 7.3 Email-Only Alerts (No SMS or Push Notifications)
