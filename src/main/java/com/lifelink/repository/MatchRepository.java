@@ -95,6 +95,17 @@ public interface MatchRepository extends JpaRepository<Match, Long> {
     long countByRequestIdAndStatus(Long requestId, MatchStatus status);
 
     /**
+     * Checks whether at least one match exists for a given request and status (e.g., ACCEPTED).
+     */
+    boolean existsByRequestIdAndStatus(Long requestId, MatchStatus status);
+
+    /**
+     * Deletes all matches for a given request matching the specified status (e.g., PENDING)
+     * and returns the count of deleted rows.
+     */
+    long deleteByRequestIdAndStatus(Long requestId, MatchStatus status);
+
+    /**
      * Count matches across the system by status (used for Admin Dashboard metrics).
      */
     long countByStatus(MatchStatus status);

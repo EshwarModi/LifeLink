@@ -1,5 +1,7 @@
 package com.lifelink.service;
 
+import com.lifelink.config.MatchingMode;
+import com.lifelink.config.MatchingProperties;
 import com.lifelink.dto.DonorProfileDto;
 import com.lifelink.dto.SeekerRequestDto;
 import com.lifelink.dto.UserRegistrationDto;
@@ -18,6 +20,7 @@ import com.lifelink.repository.MatchRepository;
 import com.lifelink.repository.SeekerRequestRepository;
 import com.lifelink.repository.UserRepository;
 import com.lifelink.service.exception.DuplicateResourceException;
+import com.lifelink.service.exception.InvalidRequestStateException;
 import com.lifelink.service.exception.UnauthorizedActionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -59,6 +62,9 @@ class LifeLinkServicesTest {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private MatchingProperties matchingProperties;
 
     @Autowired
     private UserRepository userRepository;
@@ -265,6 +271,148 @@ class LifeLinkServicesTest {
         assertThat(reloaded.getStatus()).isEqualTo(MatchStatus.EXPIRED);
     }
 
+    @Test
+    @DisplayName("DonorService: Changing donor blood group in EXACT mode expires PENDING matches for the old group and keeps ACCEPTED/DECLINED")
+    void testDonorBloodGroupChangeInExactMode_ExpiresIncompatiblePendingMatches() {
+        matchingProperties.setMode(MatchingMode.EXACT);
+
+        SeekerRequest oPosRequest = seekerRequestRepository.save(SeekerRequest.builder()
+                .seeker(seekerUser)
+                .bloodGroup(BloodGroup.O_POSITIVE)
+                .unitsNeeded(2)
+                .urgency(Urgency.HIGH)
+                .hospitalName("Hospital O+")
+                .hospitalAddress("Addr O+")
+                .requiredBy(LocalDate.now().plusDays(2))
+                .status(RequestStatus.OPEN)
+                .build());
+
+        SeekerRequest aPosRequest = seekerRequestRepository.save(SeekerRequest.builder()
+                .seeker(seekerUser)
+                .bloodGroup(BloodGroup.A_POSITIVE)
+                .unitsNeeded(1)
+                .urgency(Urgency.MEDIUM)
+                .hospitalName("Hospital A+")
+                .hospitalAddress("Addr A+")
+                .requiredBy(LocalDate.now().plusDays(3))
+                .status(RequestStatus.OPEN)
+                .build());
+
+        SeekerRequest declinedRequest = seekerRequestRepository.save(SeekerRequest.builder()
+                .seeker(seekerUser)
+                .bloodGroup(BloodGroup.O_POSITIVE)
+                .unitsNeeded(1)
+                .urgency(Urgency.LOW)
+                .hospitalName("Hospital Declined")
+                .hospitalAddress("Addr Declined")
+                .requiredBy(LocalDate.now().plusDays(4))
+                .status(RequestStatus.OPEN)
+                .build());
+
+        Match pendingOPos = matchRepository.save(Match.builder()
+                .request(oPosRequest)
+                .donor(donorUser1)
+                .status(MatchStatus.PENDING)
+                .contactShared(false)
+                .build());
+
+        Match pendingAPos = matchRepository.save(Match.builder()
+                .request(aPosRequest)
+                .donor(donorUser1)
+                .status(MatchStatus.PENDING)
+                .contactShared(false)
+                .build());
+
+        Match declinedMatch = matchRepository.save(Match.builder()
+                .request(declinedRequest)
+                .donor(donorUser1)
+                .status(MatchStatus.DECLINED)
+                .contactShared(false)
+                .build());
+
+        // Donor1 changes blood group from O_POSITIVE to A_POSITIVE in EXACT mode
+        DonorProfileDto updateDto = DonorProfileDto.builder()
+                .bloodGroup(BloodGroup.A_POSITIVE)
+                .age(30)
+                .gender(Gender.MALE)
+                .availableToDonate(true)
+                .lastDonationDate(LocalDate.now().minusDays(100))
+                .build();
+
+        donorService.updateProfile(donorUser1.getId(), updateDto);
+
+        assertThat(matchRepository.findById(pendingOPos.getId()).orElseThrow().getStatus())
+                .isEqualTo(MatchStatus.EXPIRED);
+        assertThat(matchRepository.findById(pendingAPos.getId()).orElseThrow().getStatus())
+                .isEqualTo(MatchStatus.PENDING);
+        assertThat(matchRepository.findById(declinedMatch.getId()).orElseThrow().getStatus())
+                .isEqualTo(MatchStatus.DECLINED);
+    }
+
+    @Test
+    @DisplayName("DonorService: Changing donor blood group in COMPATIBLE mode keeps still-compatible PENDING match and expires incompatible one")
+    void testDonorBloodGroupChangeInCompatibleMode_KeepsCompatiblePendingMatch() {
+        matchingProperties.setMode(MatchingMode.COMPATIBLE);
+        try {
+            // Request 1 needs A_POSITIVE (compatible with O_NEGATIVE, O_POSITIVE, A_NEGATIVE, A_POSITIVE)
+            SeekerRequest aPosRequest = seekerRequestRepository.save(SeekerRequest.builder()
+                    .seeker(seekerUser)
+                    .bloodGroup(BloodGroup.A_POSITIVE)
+                    .unitsNeeded(2)
+                    .urgency(Urgency.HIGH)
+                    .hospitalName("Hospital A+")
+                    .hospitalAddress("Addr A+")
+                    .requiredBy(LocalDate.now().plusDays(2))
+                    .status(RequestStatus.OPEN)
+                    .build());
+
+            // Request 2 needs B_NEGATIVE (compatible only with B_NEGATIVE, O_NEGATIVE — NOT O_POSITIVE or A_NEGATIVE)
+            SeekerRequest bNegRequest = seekerRequestRepository.save(SeekerRequest.builder()
+                    .seeker(seekerUser)
+                    .bloodGroup(BloodGroup.B_NEGATIVE)
+                    .unitsNeeded(1)
+                    .urgency(Urgency.CRITICAL)
+                    .hospitalName("Hospital B-")
+                    .hospitalAddress("Addr B-")
+                    .requiredBy(LocalDate.now().plusDays(2))
+                    .status(RequestStatus.OPEN)
+                    .build());
+
+            Match pendingForAPos = matchRepository.save(Match.builder()
+                    .request(aPosRequest)
+                    .donor(donorUser1)
+                    .status(MatchStatus.PENDING)
+                    .contactShared(false)
+                    .build());
+
+            Match pendingForBNeg = matchRepository.save(Match.builder()
+                    .request(bNegRequest)
+                    .donor(donorUser1)
+                    .status(MatchStatus.PENDING)
+                    .contactShared(false)
+                    .build());
+
+            // Donor1 (was O_POSITIVE) updates blood group to A_NEGATIVE:
+            // A_NEGATIVE can donate to A_POSITIVE (keep PENDING), but CANNOT donate to B_NEGATIVE (set EXPIRED)
+            DonorProfileDto updateDto = DonorProfileDto.builder()
+                    .bloodGroup(BloodGroup.A_NEGATIVE)
+                    .age(30)
+                    .gender(Gender.MALE)
+                    .availableToDonate(true)
+                    .lastDonationDate(LocalDate.now().minusDays(100))
+                    .build();
+
+            donorService.updateProfile(donorUser1.getId(), updateDto);
+
+            assertThat(matchRepository.findById(pendingForAPos.getId()).orElseThrow().getStatus())
+                    .isEqualTo(MatchStatus.PENDING);
+            assertThat(matchRepository.findById(pendingForBNeg.getId()).orElseThrow().getStatus())
+                    .isEqualTo(MatchStatus.EXPIRED);
+        } finally {
+            matchingProperties.setMode(MatchingMode.EXACT);
+        }
+    }
+
     // =========================================================================
     // 3. SeekerRequestService Tests
     // =========================================================================
@@ -371,6 +519,126 @@ class LifeLinkServicesTest {
 
         SeekerRequest cancelled = seekerRequestService.markCancelled(seekerUser.getId(), req2.getId());
         assertThat(cancelled.getStatus()).isEqualTo(RequestStatus.CANCELLED);
+    }
+
+    @Test
+    @DisplayName("SeekerRequestService: Changing blood group with 3 PENDING matches deletes old PENDING matches, preserves DECLINED, and re-runs matching without duplicate-key error")
+    void testEditRequest_BloodGroupChangedWithThreePendingMatches_DeletesOldPendingAndRematches() {
+        User donorUser3 = userRepository.save(User.builder()
+                .username("donor_mumbai_3")
+                .email("donor_mumbai_3@test.com")
+                .passwordHash(passwordEncoder.encode("Secret123"))
+                .fullName("Donor Mumbai 3")
+                .phone("8888888883")
+                .city("Mumbai")
+                .state("Maharashtra")
+                .userType(UserType.DONOR)
+                .build());
+        DonorProfile p3 = donorProfileRepository.save(DonorProfile.builder()
+                .user(donorUser3)
+                .bloodGroup(BloodGroup.A_POSITIVE)
+                .age(27)
+                .gender(Gender.MALE)
+                .availableToDonate(true)
+                .lastDonationDate(null)
+                .build());
+        donorUser3.setDonorProfile(p3);
+
+        User declinedDonor = userRepository.save(User.builder()
+                .username("donor_declined")
+                .email("donor_declined@test.com")
+                .passwordHash(passwordEncoder.encode("Secret123"))
+                .fullName("Donor Declined")
+                .phone("8888888884")
+                .city("Mumbai")
+                .state("Maharashtra")
+                .userType(UserType.DONOR)
+                .build());
+
+        SeekerRequest request = seekerRequestRepository.save(SeekerRequest.builder()
+                .seeker(seekerUser)
+                .bloodGroup(BloodGroup.O_POSITIVE)
+                .unitsNeeded(2)
+                .urgency(Urgency.HIGH)
+                .hospitalName("Hospital Edit")
+                .hospitalAddress("Addr Edit")
+                .requiredBy(LocalDate.now().plusDays(3))
+                .status(RequestStatus.OPEN)
+                .build());
+
+        // Create 3 existing PENDING matches (including donorUser3 who fits the new blood group A_POSITIVE!)
+        Match oldPending1 = matchRepository.save(Match.builder()
+                .request(request).donor(donorUser1).status(MatchStatus.PENDING).contactShared(false).build());
+        Match oldPending2 = matchRepository.save(Match.builder()
+                .request(request).donor(donorUser2).status(MatchStatus.PENDING).contactShared(false).build());
+        Match oldPending3 = matchRepository.save(Match.builder()
+                .request(request).donor(donorUser3).status(MatchStatus.PENDING).contactShared(false).build());
+
+        // And 1 DECLINED match that must NOT be deleted
+        Match declinedMatch = matchRepository.save(Match.builder()
+                .request(request).donor(declinedDonor).status(MatchStatus.DECLINED).contactShared(false).build());
+        matchRepository.flush();
+
+        // Seeker changes blood group from O_POSITIVE to A_POSITIVE
+        SeekerRequestDto editDto = SeekerRequestDto.builder()
+                .bloodGroup(BloodGroup.A_POSITIVE)
+                .unitsNeeded(2)
+                .urgency(Urgency.HIGH)
+                .hospitalName("Hospital Edit")
+                .hospitalAddress("Addr Edit")
+                .requiredBy(LocalDate.now().plusDays(3))
+                .build();
+
+        seekerRequestService.editRequest(seekerUser.getId(), request.getId(), editDto);
+
+        // Old 3 PENDING matches are deleted (old IDs no longer exist)
+        assertThat(matchRepository.findById(oldPending1.getId())).isEmpty();
+        assertThat(matchRepository.findById(oldPending2.getId())).isEmpty();
+        assertThat(matchRepository.findById(oldPending3.getId())).isEmpty();
+
+        // DECLINED match is untouched
+        assertThat(matchRepository.findById(declinedMatch.getId())).isPresent();
+        assertThat(matchRepository.findById(declinedMatch.getId()).get().getStatus()).isEqualTo(MatchStatus.DECLINED);
+
+        // New matching ran for A_POSITIVE and matched donorUser3 with a fresh PENDING match (no duplicate-key error!)
+        List<Match> newPendingMatches = matchRepository.findByRequestIdAndStatus(request.getId(), MatchStatus.PENDING);
+        assertThat(newPendingMatches).hasSize(1);
+        assertThat(newPendingMatches.get(0).getDonor().getId()).isEqualTo(donorUser3.getId());
+    }
+
+    @Test
+    @DisplayName("SeekerRequestService: Changing blood group when request has an ACCEPTED match is rejected")
+    void testEditRequest_BloodGroupChangedWithAcceptedMatch_Rejected() {
+        SeekerRequest request = seekerRequestRepository.save(SeekerRequest.builder()
+                .seeker(seekerUser)
+                .bloodGroup(BloodGroup.O_POSITIVE)
+                .unitsNeeded(2)
+                .urgency(Urgency.HIGH)
+                .hospitalName("Hospital Accepted")
+                .hospitalAddress("Addr Accepted")
+                .requiredBy(LocalDate.now().plusDays(3))
+                .status(RequestStatus.OPEN)
+                .build());
+
+        matchRepository.save(Match.builder()
+                .request(request)
+                .donor(donorUser1)
+                .status(MatchStatus.ACCEPTED)
+                .contactShared(true)
+                .build());
+
+        SeekerRequestDto editDto = SeekerRequestDto.builder()
+                .bloodGroup(BloodGroup.A_POSITIVE)
+                .unitsNeeded(2)
+                .urgency(Urgency.HIGH)
+                .hospitalName("Hospital Accepted")
+                .hospitalAddress("Addr Accepted")
+                .requiredBy(LocalDate.now().plusDays(3))
+                .build();
+
+        assertThatThrownBy(() -> seekerRequestService.editRequest(seekerUser.getId(), request.getId(), editDto))
+                .isInstanceOf(InvalidRequestStateException.class)
+                .hasMessage("Blood group cannot be changed after a donor has accepted");
     }
 
     // =========================================================================

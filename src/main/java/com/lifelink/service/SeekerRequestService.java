@@ -4,7 +4,9 @@ import com.lifelink.dto.SeekerRequestDto;
 import com.lifelink.model.SeekerRequest;
 import com.lifelink.model.User;
 import com.lifelink.model.enums.BloodGroup;
+import com.lifelink.model.enums.MatchStatus;
 import com.lifelink.model.enums.RequestStatus;
+import com.lifelink.repository.MatchRepository;
 import com.lifelink.repository.SeekerRequestRepository;
 import com.lifelink.repository.UserRepository;
 import com.lifelink.service.exception.InvalidRequestStateException;
@@ -34,6 +36,7 @@ public class SeekerRequestService {
 
     private final SeekerRequestRepository seekerRequestRepository;
     private final UserRepository userRepository;
+    private final MatchRepository matchRepository;
     private final MatchingService matchingService;
 
     /**
@@ -74,6 +77,15 @@ public class SeekerRequestService {
     /**
      * Edits an open blood request with ownership check and identical validation rules.
      *
+     * <p>When the blood group changes:
+     * <ul>
+     *   <li>If any {@code ACCEPTED} match exists for this request, the edit is rejected with
+     *       {@link InvalidRequestStateException} because contact details were already shared.</li>
+     *   <li>Otherwise, existing {@code PENDING} matches for this request are deleted (preserving
+     *       {@code DECLINED} matches), flushed, logged, and matching is re-run for the new blood group.</li>
+     * </ul>
+     * </p>
+     *
      * @param seekerUserId ID of the authenticated seeker
      * @param requestId ID of the request to edit
      * @param dto updated request fields
@@ -95,7 +107,12 @@ public class SeekerRequestService {
             throw new InvalidRequestStateException("Cannot edit request with status: " + request.getStatus());
         }
 
-        boolean bloodGroupChanged = (request.getBloodGroup() != dto.getBloodGroup());
+        BloodGroup oldBloodGroup = request.getBloodGroup();
+        boolean bloodGroupChanged = (oldBloodGroup != dto.getBloodGroup());
+
+        if (bloodGroupChanged && matchRepository.existsByRequestIdAndStatus(requestId, MatchStatus.ACCEPTED)) {
+            throw new InvalidRequestStateException("Blood group cannot be changed after a donor has accepted");
+        }
 
         request.setBloodGroup(dto.getBloodGroup());
         request.setUnitsNeeded(dto.getUnitsNeeded());
@@ -108,8 +125,12 @@ public class SeekerRequestService {
         SeekerRequest updated = seekerRequestRepository.save(request);
         log.info("Updated SeekerRequest ID {}", updated.getId());
 
-        // If blood group changed, re-run matching engine
+        // If blood group changed, remove stale PENDING matches and re-run matching engine
         if (bloodGroupChanged) {
+            long removedCount = matchRepository.deleteByRequestIdAndStatus(updated.getId(), MatchStatus.PENDING);
+            matchRepository.flush();
+            log.info("[SECURITY_AUDIT] event=REQUEST_BLOOD_GROUP_CHANGED requestId={} oldBloodGroup={} newBloodGroup={} pendingMatchesRemoved={}",
+                    updated.getId(), oldBloodGroup, updated.getBloodGroup(), removedCount);
             matchingService.findAndCreateMatches(updated);
         }
 

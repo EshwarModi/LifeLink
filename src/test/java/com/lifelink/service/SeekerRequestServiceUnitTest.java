@@ -4,9 +4,11 @@ import com.lifelink.dto.SeekerRequestDto;
 import com.lifelink.model.SeekerRequest;
 import com.lifelink.model.User;
 import com.lifelink.model.enums.BloodGroup;
+import com.lifelink.model.enums.MatchStatus;
 import com.lifelink.model.enums.RequestStatus;
 import com.lifelink.model.enums.Urgency;
 import com.lifelink.model.enums.UserType;
+import com.lifelink.repository.MatchRepository;
 import com.lifelink.repository.SeekerRequestRepository;
 import com.lifelink.repository.UserRepository;
 import com.lifelink.service.exception.InvalidRequestStateException;
@@ -46,6 +48,9 @@ class SeekerRequestServiceUnitTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private MatchRepository matchRepository;
 
     @Mock
     private MatchingService matchingService;
@@ -272,21 +277,44 @@ class SeekerRequestServiceUnitTest {
     }
 
     @Test
-    @DisplayName("Edit Success: Updates fields, and triggers matching if blood group was changed")
-    void testEdit_BloodGroupChanged_TriggersMatching() {
+    @DisplayName("Edit Success: Updates fields, deletes PENDING matches, and triggers matching if blood group was changed")
+    void testEdit_BloodGroupChanged_DeletesPendingMatchesAndTriggersMatching() {
         SeekerRequestDto dtoWithNewBloodGroup = validDtoBuilder()
                 .bloodGroup(BloodGroup.B_POSITIVE) // Changed from A_POSITIVE
                 .unitsNeeded(4)
                 .build();
 
         when(seekerRequestRepository.findById(100L)).thenReturn(Optional.of(existingOpenRequest));
+        when(matchRepository.existsByRequestIdAndStatus(100L, MatchStatus.ACCEPTED)).thenReturn(false);
+        when(matchRepository.deleteByRequestIdAndStatus(100L, MatchStatus.PENDING)).thenReturn(3L);
         when(seekerRequestRepository.save(any(SeekerRequest.class))).thenAnswer(i -> i.getArgument(0));
 
         SeekerRequest updated = seekerRequestService.editRequest(1L, 100L, dtoWithNewBloodGroup);
 
         assertThat(updated.getBloodGroup()).isEqualTo(BloodGroup.B_POSITIVE);
         assertThat(updated.getUnitsNeeded()).isEqualTo(4);
+        verify(matchRepository, times(1)).deleteByRequestIdAndStatus(100L, MatchStatus.PENDING);
+        verify(matchRepository, times(1)).flush();
         verify(matchingService, times(1)).findAndCreateMatches(updated);
+    }
+
+    @Test
+    @DisplayName("Edit Rejected: Throws InvalidRequestStateException when blood group changes after a donor has ACCEPTED")
+    void testEdit_BloodGroupChangedWithAcceptedMatch_ThrowsInvalidRequestStateException() {
+        SeekerRequestDto dtoWithNewBloodGroup = validDtoBuilder()
+                .bloodGroup(BloodGroup.B_POSITIVE)
+                .build();
+
+        when(seekerRequestRepository.findById(100L)).thenReturn(Optional.of(existingOpenRequest));
+        when(matchRepository.existsByRequestIdAndStatus(100L, MatchStatus.ACCEPTED)).thenReturn(true);
+
+        assertThatThrownBy(() -> seekerRequestService.editRequest(1L, 100L, dtoWithNewBloodGroup))
+                .isInstanceOf(InvalidRequestStateException.class)
+                .hasMessage("Blood group cannot be changed after a donor has accepted");
+
+        verify(seekerRequestRepository, never()).save(any());
+        verify(matchRepository, never()).deleteByRequestIdAndStatus(any(), any());
+        verify(matchingService, never()).findAndCreateMatches(any());
     }
 
     @Test
@@ -303,6 +331,7 @@ class SeekerRequestServiceUnitTest {
         SeekerRequest updated = seekerRequestService.editRequest(1L, 100L, dtoSameBloodGroup);
 
         assertThat(updated.getUnitsNeeded()).isEqualTo(3);
+        verify(matchRepository, never()).deleteByRequestIdAndStatus(any(), any());
         verify(matchingService, never()).findAndCreateMatches(any());
     }
 
