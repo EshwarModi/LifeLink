@@ -37,7 +37,9 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -352,6 +354,105 @@ class MockMvcFlowAndCsrfIntegrationTest {
                 .andExpect(jsonPath("$.status").value("UP"))
                 .andExpect(jsonPath("$.components").doesNotExist())
                 .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    // =========================================================================
+    // 7. End-to-End Full Lifecycle Regression Flow
+    // =========================================================================
+
+    @Test
+    @DisplayName("Full E2E Flow: register seeker -> register donor -> seeker posts request -> donor sees it -> donor accepts -> both see contact info")
+    void testFullEndToEndLifecycleFlow() throws Exception {
+        // Step 1: Register Seeker
+        mockMvc.perform(post("/register")
+                        .with(csrf())
+                        .param("username", "e2e_seeker")
+                        .param("email", "e2e_seeker@lifelink.org")
+                        .param("password", "SeekerPass1")
+                        .param("fullName", "Aarav Seeker")
+                        .param("phone", "+919811112222")
+                        .param("city", "Chennai")
+                        .param("state", "Tamil Nadu")
+                        .param("userType", "SEEKER"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?registered=true"));
+
+        User registeredSeeker = userRepository.findByUsername("e2e_seeker").orElseThrow();
+        CustomUserDetails e2eSeekerDetails = new CustomUserDetails(registeredSeeker);
+
+        // Step 2: Register Donor (same city & blood group AB_POSITIVE)
+        mockMvc.perform(post("/register")
+                        .with(csrf())
+                        .param("username", "e2e_donor")
+                        .param("email", "e2e_donor@lifelink.org")
+                        .param("password", "DonorPass1")
+                        .param("fullName", "Diya Donor")
+                        .param("phone", "+919833334444")
+                        .param("city", "Chennai")
+                        .param("state", "Tamil Nadu")
+                        .param("userType", "DONOR")
+                        .param("bloodGroup", "AB_POSITIVE")
+                        .param("age", "26")
+                        .param("gender", "FEMALE"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/login?registered=true"));
+
+        User registeredDonor = userRepository.findByUsername("e2e_donor").orElseThrow();
+        CustomUserDetails e2eDonorDetails = new CustomUserDetails(registeredDonor);
+
+        // Step 3: Seeker posts blood request for AB_POSITIVE
+        mockMvc.perform(post("/requests")
+                        .with(csrf())
+                        .with(user(e2eSeekerDetails))
+                        .param("bloodGroup", "AB_POSITIVE")
+                        .param("unitsNeeded", "2")
+                        .param("urgency", "CRITICAL")
+                        .param("reason", "Cardiac surgery")
+                        .param("hospitalName", "Apollo Chennai Hospital")
+                        .param("hospitalAddress", "Greams Road, Chennai")
+                        .param("requiredBy", LocalDate.now().plusDays(3).toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/seeker/dashboard"));
+
+        SeekerRequest postedRequest = seekerRequestRepository
+                .findBySeekerIdOrderByCreatedAtDesc(registeredSeeker.getId())
+                .get(0);
+
+        // Step 4: Donor sees the PENDING match on their dashboard, and seeker phone is hidden prior to acceptance
+        mockMvc.perform(get("/donor/dashboard")
+                        .with(user(e2eDonorDetails)))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Apollo Chennai Hospital")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("+919811112222"))));
+
+        mockMvc.perform(get("/requests/" + postedRequest.getId())
+                        .with(user(e2eDonorDetails)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("contactRevealed", false))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("+919811112222"))));
+
+        // Step 5: Donor accepts the match
+        mockMvc.perform(post("/matches/" + postedRequest.getId() + "/accept")
+                        .with(csrf())
+                        .with(user(e2eDonorDetails)))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/requests/" + postedRequest.getId()));
+
+        // Step 6: Both Donor and Seeker now see each other's contact info
+        // 6a. Donor views request detail -> sees seeker's phone (+919811112222)
+        mockMvc.perform(get("/requests/" + postedRequest.getId())
+                        .with(user(e2eDonorDetails)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("contactRevealed", true))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("+919811112222")));
+
+        // 6b. Seeker views request detail -> sees donor's name and phone (+919833334444)
+        mockMvc.perform(get("/requests/" + postedRequest.getId())
+                        .with(user(e2eSeekerDetails)))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("contactRevealed", true))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Diya Donor")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("+919833334444")));
     }
 }
 

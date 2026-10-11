@@ -173,11 +173,11 @@ Flyway automatically executes [`V1__init.sql`](file:///c:/yuvi/LifeLink/src/main
 
 ## 5. Testing Suite
 
-The project includes 109 automated tests spanning pure unit tests, Bean Validation tests, and full MockMvc integration tests using the isolated H2 test profile (`@ActiveProfiles("test")`).
+The project includes 183 automated tests spanning pure unit tests, Bean Validation tests, `ApplicationContextRunner` startup tests, asynchronous transaction event tests, and full MockMvc integration tests using the isolated H2 test profile (`@ActiveProfiles("test")`).
 
 ```powershell
-# Run the complete test suite
-mvn clean test
+# Run the complete test suite and verification lifecycle
+mvn clean verify
 
 # Run specific unit test suites
 mvn test -Dtest=MatchingServiceUnitTest
@@ -249,30 +249,26 @@ Sensitive authentication and privacy-critical transitions emit structured audit 
   ```text
   [SECURITY_AUDIT] event=MATCH_DECLINED donorId=12 requestId=5 matchId=42
   ```
+- **Request Blood Group Changed**:
+  ```text
+  [SECURITY_AUDIT] event=REQUEST_BLOOD_GROUP_CHANGED requestId=5 oldBloodGroup=O_POSITIVE newBloodGroup=A_POSITIVE pendingMatchesRemoved=3
+  ```
 
 ---
 
-## 7. Known Limitations & Future Work
+## 7. Known Limitations
 
-### 7.1 Matching Modes & ABO/Rh Compatibility (Phase 12 Feature Flag)
+### 7.1 Exact-Match Default & RBC-Only Compatibility (`lifelink.matching.mode`)
 LifeLink supports two configurable matching modes via `lifelink.matching.mode` (default: `EXACT`), governed by `lifelink.matching.min-threshold` (default: `3`) and `lifelink.matching.max-matches` (default: `25`):
 
-1. **`EXACT` Mode (Default):**
-   - Matching strictly pairs requests with donors of the identical blood group (`O+` to `O+`, `A-` to `A-`).
-   - Ensures deterministic queries, simplicity for codebase auditing, and preserves scarce universal supplies.
-2. **`COMPATIBLE` Mode (`lifelink.matching.mode=COMPATIBLE`):**
-   - Enables red blood cell (packed RBC) compatibility matching via [`BloodCompatibility`](file:///c:/yuvi/LifeLink/src/main/java/com/lifelink/service/BloodCompatibility.java).
-   - Candidate ranking: **Exact matches are always ranked first** across the three location tiers. Expansion to compatible non-exact blood groups (e.g. `O-` for an `A+` request) occurs **only if** the exact-match total is below `lifelink.matching.min-threshold` (`3`), applying the identical three-tier rules and `lifelink.matching.max-matches` (`25`) cap.
-   - Preserves location tier priority (City $\rightarrow$ State $\rightarrow$ Nationwide) within each blood group phase.
-   - Donors see a contextual badge in their dashboard: `Compatible match: your O- blood can be used for an A+ request`.
-
-> [!CAUTION]
-> **Medical & Transfusion Caveat:**
-> Compatibility in this platform covers **packed red blood cell (RBC) donation only**. Plasma and platelet donations follow inverse or different compatibility rules (e.g. AB is universal plasma donor, not O). Furthermore, final medical cross-matching and clinical donor screening are always performed directly by hospitals and certified blood banks, not by this software application.
+1. **`EXACT` Mode is the Default:**
+   - Out of the box, matching pairs requests only with donors of the identical blood group (`O+` to `O+`, `A-` to `A-`) to preserve universal donor (`O-`) supplies unless `lifelink.matching.mode=COMPATIBLE` is explicitly enabled.
+2. **Packed Red Blood Cells (RBC) Only:**
+   - When `COMPATIBLE` mode is enabled via [`BloodCompatibility`](file:///c:/yuvi/LifeLink/src/main/java/com/lifelink/service/BloodCompatibility.java), compatibility rules model **packed red blood cell (RBC)** transfusion only. Plasma and platelet donations follow different compatibility rules, and clinical cross-matching is always performed by the hospital or blood bank.
 
 ### 7.2 Single-Node In-Memory Rate Limiting
-- **Spoofing & Heap Protection**: [`RateLimitingFilter`](file:///c:/yuvi/LifeLink/src/main/java/com/lifelink/security/RateLimitingFilter.java) uses bounded **Caffeine caches** (`expireAfterAccess = 10m`, `maximumSize = 10,000`) to prevent memory exhaustion, and ignores `X-Forwarded-For` by default (`lifelink.rate-limit.trust-forwarded-headers=false`), keying strictly by `request.getRemoteAddr()` so clients cannot spoof headers to bypass rate limits. `trust-forwarded-headers=true` should only be enabled behind a trusted reverse proxy that strips/overwrites client-supplied headers.
-- **Remaining Limitation (Per-Node State)**: Because the Caffeine + Bucket4j caches reside in local JVM memory, rate-limit counters are **per application instance** and are not shared across multiple horizontally scaled nodes. In a multi-instance deployment behind a load balancer, rate limits should be backed by a distributed store such as Redis (`bucket4j-redis`).
+- [`RateLimitingFilter`](file:///c:/yuvi/LifeLink/src/main/java/com/lifelink/security/RateLimitingFilter.java) stores per-IP token buckets in bounded local **Caffeine caches** (`expireAfterAccess = 10m`, `maximumSize = 10,000`) and ignores `X-Forwarded-For` unless `lifelink.rate-limit.trust-forwarded-headers=true` is explicitly enabled behind a trusted reverse proxy.
+- Because the cache resides in local JVM memory, rate-limit counters are **per application node** and are not shared across horizontally scaled instances (a multi-node deployment would require a distributed backing store such as Redis).
 
-### 7.3 Direct SMTP Dispatch
-- Email notifications run synchronously within `NotificationService` (with timeouts). In high-volume production systems, dispatching notifications through an asynchronous message broker (e.g., RabbitMQ, Kafka, or Spring `@Async`) decouples HTTP request threads from external SMTP latency.
+### 7.3 Email-Only Alerts (No SMS or Push Notifications)
+- Match alerts are dispatched asynchronously after transaction commit (`@TransactionalEventListener(phase = AFTER_COMMIT)` + `@Async` on `mailTaskExecutor`) via SMTP email only; there is no SMS or mobile push notification integration.
