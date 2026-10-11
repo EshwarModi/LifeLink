@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -21,6 +22,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -49,6 +51,9 @@ class SecurityIntegrationTest {
     @BeforeEach
     void setUp() {
         rateLimitingFilter.resetBuckets();
+        rateLimitingFilter.setTrustForwardedHeaders(false);
+        rateLimitingFilter.setLoginCapacity(RateLimitingFilter.DEFAULT_LOGIN_CAPACITY);
+        rateLimitingFilter.setRegisterCapacity(RateLimitingFilter.DEFAULT_REGISTER_CAPACITY);
         if (!userRepository.existsByUsername("test_donor")) {
             userRepository.save(User.builder()
                     .username("test_donor")
@@ -255,9 +260,9 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("Rate limiting: Excessive POST /login requests return HTTP 429")
+    @DisplayName("Rate limiting: 11th POST /login in a minute returns HTTP 429 with Retry-After, while a different IP is unaffected")
     void testRateLimiterReturns429OnExcessiveLoginAttempts() throws Exception {
-        // Send 10 requests consuming the 10-token capacity
+        // Send 10 requests consuming the 10-token capacity for 127.0.0.1
         for (int i = 0; i < 10; i++) {
             mockMvc.perform(post("/login")
                             .with(csrf())
@@ -266,11 +271,83 @@ class SecurityIntegrationTest {
                     .andReturn();
         }
 
-        // 11th request must be rejected by RateLimitingFilter with HTTP 429
+        // 11th request from 127.0.0.1 must be rejected with HTTP 429 and Retry-After header
         mockMvc.perform(post("/login")
                         .with(csrf())
                         .param("username", "bad_user")
                         .param("password", "bad_pass"))
-                .andExpect(status().isTooManyRequests());
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists(HttpHeaders.RETRY_AFTER));
+
+        // A different IP (203.0.113.55) must be unaffected and processed normally
+        mockMvc.perform(post("/login")
+                        .with(csrf())
+                        .with(request -> {
+                            request.setRemoteAddr("203.0.113.55");
+                            return request;
+                        })
+                        .param("username", "test_donor")
+                        .param("password", "Secret123"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/donor/dashboard"));
+    }
+
+    @Test
+    @DisplayName("Rate limiting (trust=false): Changing X-Forwarded-For between requests does NOT reset the limit")
+    void testRateLimiterIgnoresXForwardedForWhenTrustIsFalse() throws Exception {
+        rateLimitingFilter.setTrustForwardedHeaders(false);
+
+        // Send 10 requests with different spoofed X-Forwarded-For headers from the same remoteAddr
+        for (int i = 1; i <= 10; i++) {
+            mockMvc.perform(post("/login")
+                            .with(csrf())
+                            .header("X-Forwarded-For", "198.51.100." + i)
+                            .param("username", "bad_user")
+                            .param("password", "bad_pass"))
+                    .andReturn();
+        }
+
+        // 11th request with yet another spoofed X-Forwarded-For header is still rejected with 429
+        mockMvc.perform(post("/login")
+                        .with(csrf())
+                        .header("X-Forwarded-For", "198.51.100.250")
+                        .param("username", "bad_user")
+                        .param("password", "bad_pass"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists(HttpHeaders.RETRY_AFTER));
+    }
+
+    @Test
+    @DisplayName("Rate limiting (trust=true): Keys buckets on the first IP of X-Forwarded-For")
+    void testRateLimiterKeysOnXForwardedForWhenTrustIsTrue() throws Exception {
+        rateLimitingFilter.setTrustForwardedHeaders(true);
+
+        // Exhaust the 10-token bucket for forwarded IP 203.0.113.10
+        for (int i = 0; i < 10; i++) {
+            mockMvc.perform(post("/login")
+                            .with(csrf())
+                            .header("X-Forwarded-For", "203.0.113.10, 10.0.0.1")
+                            .param("username", "bad_user")
+                            .param("password", "bad_pass"))
+                    .andReturn();
+        }
+
+        // 11th request for 203.0.113.10 is rejected with 429 and Retry-After
+        mockMvc.perform(post("/login")
+                        .with(csrf())
+                        .header("X-Forwarded-For", "203.0.113.10, 10.0.0.1")
+                        .param("username", "bad_user")
+                        .param("password", "bad_pass"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().exists(HttpHeaders.RETRY_AFTER));
+
+        // Request with a different X-Forwarded-For IP (203.0.113.20) is unaffected
+        mockMvc.perform(post("/login")
+                        .with(csrf())
+                        .header("X-Forwarded-For", "203.0.113.20, 10.0.0.1")
+                        .param("username", "test_donor")
+                        .param("password", "Secret123"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/donor/dashboard"));
     }
 }

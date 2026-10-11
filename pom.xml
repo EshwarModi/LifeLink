@@ -82,11 +82,16 @@
             <artifactId>flyway-mysql</artifactId>
         </dependency>
 
-        <!-- Rate Limiting -->
+        <!-- Rate Limiting & Bounded In-Memory Caching -->
         <dependency>
             <groupId>com.bucket4j</groupId>
             <artifactId>bucket4j-core</artifactId>
             <version>${bucket4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
         </dependency>
 
         <!-- Developer Tooling -->
