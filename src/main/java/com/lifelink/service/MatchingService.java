@@ -9,6 +9,7 @@ import com.lifelink.model.User;
 import com.lifelink.model.enums.BloodGroup;
 import com.lifelink.model.enums.MatchStatus;
 import com.lifelink.model.enums.RequestStatus;
+import com.lifelink.notification.MatchCreatedEvent;
 import com.lifelink.repository.MatchRepository;
 import com.lifelink.repository.SeekerRequestRepository;
 import com.lifelink.repository.UserRepository;
@@ -17,6 +18,7 @@ import com.lifelink.service.exception.ResourceNotFoundException;
 import com.lifelink.service.exception.UnauthorizedActionException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,16 +74,17 @@ public class MatchingService {
     private final UserRepository userRepository;
     private final SeekerRequestRepository seekerRequestRepository;
     private final MatchRepository matchRepository;
-    private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
     private final DonorService donorService;
     private final MatchingProperties matchingProperties;
 
     /**
      * Executes the three-tier matching workflow for an open seeker request.
-     * Persists new PENDING matches and sends notification emails without breaking on delivery errors.
+     * Persists new PENDING matches and publishes {@link MatchCreatedEvent} events
+     * for asynchronous {@code AFTER_COMMIT} email dispatch.
      *
      * @param request the open SeekerRequest to match
-     * @return list of newly created or existing matches
+     * @return list of newly created matches
      */
     @Transactional
     public List<Match> findAndCreateMatches(SeekerRequest request) {
@@ -128,7 +131,7 @@ public class MatchingService {
             }
         }
 
-        // Persist matches and trigger email notifications
+        // Persist matches and publish plain-value events for async AFTER_COMMIT email notifications
         List<Match> createdMatches = new ArrayList<>();
         for (User donor : matchedDonors) {
             if (!matchRepository.existsByRequestIdAndDonorId(request.getId(), donor.getId())) {
@@ -143,8 +146,8 @@ public class MatchingService {
                 Match savedMatch = matchRepository.save(match);
                 createdMatches.add(savedMatch);
 
-                // Send decoupled, fail-safe notification (Design Decision #12)
-                notificationService.sendMatchNotification(donor, request);
+                // Publish immutable event (handled asynchronously after transaction commit)
+                eventPublisher.publishEvent(MatchCreatedEvent.from(donor, request));
             }
         }
 

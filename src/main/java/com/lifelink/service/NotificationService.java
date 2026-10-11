@@ -1,7 +1,6 @@
 package com.lifelink.service;
 
-import com.lifelink.model.SeekerRequest;
-import com.lifelink.model.User;
+import com.lifelink.notification.MatchCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,8 +14,9 @@ import org.springframework.stereotype.Service;
  * <p>Enforces Design Decision #12:
  * <ul>
  *   <li>Uses {@link JavaMailSender}.</li>
+ *   <li>Accepts immutable plain-value {@link MatchCreatedEvent} payloads (never JPA entities).</li>
  *   <li>Strictly <b>no seeker contact info</b> (e.g. phone) is included in match alert emails.</li>
- *   <li>Completely failure-tolerant: delivery exceptions are logged and suppressed so match creation is never rolled back.</li>
+ *   <li>Completely failure-tolerant: delivery exceptions are logged and suppressed.</li>
  * </ul>
  * </p>
  */
@@ -31,13 +31,12 @@ public class NotificationService {
     private String mailFrom;
 
     /**
-     * Alerts an eligible donor that an open request with their blood group needs assistance.
+     * Alerts an eligible donor that an open request matching their blood group needs assistance.
      *
-     * @param donor recipient donor user
-     * @param request the matching open seeker request
+     * @param event immutable plain-value match notification payload
      */
-    public void sendMatchNotification(User donor, SeekerRequest request) {
-        if (donor == null || donor.getEmail() == null || donor.getEmail().isBlank()) {
+    public void sendMatchNotification(MatchCreatedEvent event) {
+        if (event == null || event.donorEmail() == null || event.donorEmail().isBlank()) {
             log.warn("Cannot send match notification: Donor email is missing");
             return;
         }
@@ -45,8 +44,8 @@ public class NotificationService {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(mailFrom);
-            message.setTo(donor.getEmail());
-            message.setSubject("LifeLink Urgent Alert: Blood Match Needed (" + request.getBloodGroup().getLabel() + ")");
+            message.setTo(event.donorEmail());
+            message.setSubject("LifeLink Urgent Alert: Blood Match Needed (" + event.bloodGroupLabel() + ")");
 
             // Note: Under Design Decision #12, no seeker phone or personal contact info is shared in this email!
             String body = String.format(
@@ -61,25 +60,26 @@ public class NotificationService {
                 "Personal contact information is kept strictly confidential until you accept the match on LifeLink.\n\n" +
                 "Thank you for saving lives,\n" +
                 "The LifeLink Platform Team",
-                donor.getFullName(),
-                request.getHospitalName(),
-                request.getSeeker().getCity(),
-                request.getUnitsNeeded(),
-                request.getBloodGroup().getLabel(),
-                request.getBloodGroup().getLabel(),
-                request.getUrgency().getLabel(),
-                request.getHospitalName(),
-                request.getHospitalAddress(),
-                request.getRequiredBy()
+                event.donorFullName(),
+                event.hospitalName(),
+                event.city(),
+                event.units(),
+                event.bloodGroupLabel(),
+                event.bloodGroupLabel(),
+                event.urgencyLabel(),
+                event.hospitalName(),
+                event.hospitalAddress(),
+                event.requiredBy()
             );
 
             message.setText(body);
             mailSender.send(message);
-            log.info("Sent match notification email to donor {} for request ID {}", donor.getUsername(), request.getId());
+            log.info("Sent match notification email to donor {} for request ID {}",
+                    event.donorUsername(), event.requestId());
         } catch (Exception ex) {
-            // Failure-tolerant: Delivery failures must not disrupt transactional match creation
+            // Failure-tolerant: Delivery failures must never disrupt application flow
             log.error("Unable to deliver match notification to donor email {} (Request ID: {}): {}",
-                    donor.getEmail(), request.getId(), ex.getMessage());
+                    event.donorEmail(), event.requestId(), ex.getMessage());
         }
     }
 }

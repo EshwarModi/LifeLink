@@ -468,6 +468,8 @@ class LifeLinkServicesTest {
                 .build();
 
         // Must execute gracefully without throwing an exception
-        notificationService.sendMatchNotification(donorUser1, request);
+        notificationService.sendMatchNotification(
+                com.lifelink.notification.MatchCreatedEvent.from(donorUser1, request)
+        );
     }
 }

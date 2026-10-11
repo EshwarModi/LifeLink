@@ -10,6 +10,7 @@ import com.lifelink.model.enums.BloodGroup;
 import com.lifelink.model.enums.MatchStatus;
 import com.lifelink.model.enums.RequestStatus;
 import com.lifelink.model.enums.UserType;
+import com.lifelink.notification.MatchCreatedEvent;
 import com.lifelink.repository.MatchRepository;
 import com.lifelink.repository.SeekerRequestRepository;
 import com.lifelink.repository.UserRepository;
@@ -23,6 +24,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -63,7 +65,7 @@ class MatchingServiceUnitTest {
     private MatchRepository matchRepository;
 
     @Mock
-    private NotificationService notificationService;
+    private ApplicationEventPublisher eventPublisher;
 
     @Mock
     private DonorService donorService;
@@ -134,7 +136,7 @@ class MatchingServiceUnitTest {
         verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
         verify(userRepository, never()).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
         verify(userRepository, never()).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
-        verify(notificationService, times(5)).sendMatchNotification(any(User.class), eq(openRequest));
+        verify(eventPublisher, times(5)).publishEvent(any(MatchCreatedEvent.class));
     }
 
     @Test
@@ -166,7 +168,7 @@ class MatchingServiceUnitTest {
         verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
         verify(userRepository, never()).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
         verify(userRepository, never()).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
-        verify(notificationService, times(25)).sendMatchNotification(any(User.class), eq(openRequest));
+        verify(eventPublisher, times(25)).publishEvent(any(MatchCreatedEvent.class));
     }
 
     @Test
@@ -202,7 +204,7 @@ class MatchingServiceUnitTest {
         verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
         verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
         verify(userRepository, never()).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
-        verify(notificationService, times(7)).sendMatchNotification(any(User.class), eq(openRequest));
+        verify(eventPublisher, times(7)).publishEvent(any(MatchCreatedEvent.class));
     }
 
     @Test
@@ -272,7 +274,7 @@ class MatchingServiceUnitTest {
         // Then: Tier 3 tops up only to MIN_MATCH_THRESHOLD (3)
         assertThat(matches).hasSize(3);
         assertThat(matches).extracting(m -> m.getDonor().getId()).containsExactly(2001L, 2002L, 2003L);
-        verify(notificationService, times(3)).sendMatchNotification(any(User.class), eq(openRequest));
+        verify(eventPublisher, times(3)).publishEvent(any(MatchCreatedEvent.class));
     }
 
     @Test
