@@ -19,6 +19,7 @@ import org.springframework.security.web.authentication.LoginUrlAuthenticationEnt
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.web.util.matcher.AnyRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 
 import java.nio.charset.StandardCharsets;
 
@@ -31,8 +32,8 @@ import java.nio.charset.StandardCharsets;
  *   <li><b>Session Fixation Protection:</b> Enforces session migration on authentication (Design Decision #2).</li>
  *   <li><b>Password Hashing:</b> BCryptPasswordEncoder with strength factor 12 (Design Decision #3).</li>
  *   <li><b>Rate Limiting:</b> Bucket4j filter before UsernamePasswordAuthenticationFilter for POST /login and POST /register (Design Decision #4).</li>
- *   <li><b>Strict Role Separation:</b> /admin/** restricted to ROLE_ADMIN, /seeker/** restricted to ROLE_SEEKER, /donor/** restricted to ROLE_DONOR,
- *       GET /api/donors restricted to ROLE_SEEKER or ROLE_ADMIN, GET /api/requests restricted to authenticated users.</li>
+ *   <li><b>Strict Role Separation:</b> /admin/** and non-health /actuator/** restricted to ROLE_ADMIN, /seeker/** restricted to ROLE_SEEKER,
+ *       /donor/** restricted to ROLE_DONOR, GET /api/donors restricted to ROLE_SEEKER or ROLE_ADMIN, GET /api/requests restricted to authenticated users.</li>
  * </ul>
  * </p>
  */
@@ -65,12 +66,14 @@ public class SecurityConfig {
 
             // 2. Authorization Rules
             .authorizeHttpRequests(auth -> auth
-                // Public routes: Home, Login, Register, Actuator Health, Error, and Static Assets
+                // Public routes: Home, Login, Register, Actuator Health Probes, Error, and Static Assets
                 .requestMatchers(
                     "/",
                     "/login",
                     "/register",
-                    "/actuator/**",
+                    "/actuator/health",
+                    "/actuator/health/liveness",
+                    "/actuator/health/readiness",
                     "/error",
                     "/css/**",
                     "/js/**",
@@ -84,8 +87,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/donors").hasAnyRole("SEEKER", "ADMIN")
                 .requestMatchers("/api/**").authenticated()
 
-                // Admin-only management endpoints
-                .requestMatchers("/admin/**").hasRole("ADMIN")
+                // Admin-only management and remaining actuator endpoints
+                .requestMatchers("/admin/**", "/actuator/**").hasRole("ADMIN")
 
                 // Seeker-specific endpoints
                 .requestMatchers(
@@ -107,7 +110,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
 
-            // 3. Exception Handling: JSON 401 & 403 for /api/**, standard HTML redirect/error for web pages
+            // 3. Exception Handling: JSON 401 & 403 for /api/** and /actuator/**, standard HTML redirect/error for web pages
             .exceptionHandling(ex -> ex
                 .defaultAuthenticationEntryPointFor(
                     (request, response, authException) -> {
@@ -116,7 +119,10 @@ public class SecurityConfig {
                         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                         response.getWriter().write("{\"error\":\"Authentication required\"}");
                     },
-                    new AntPathRequestMatcher("/api/**")
+                    new OrRequestMatcher(
+                        new AntPathRequestMatcher("/api/**"),
+                        new AntPathRequestMatcher("/actuator/**")
+                    )
                 )
                 .defaultAuthenticationEntryPointFor(
                     new LoginUrlAuthenticationEntryPoint("/login"),
@@ -129,7 +135,10 @@ public class SecurityConfig {
                         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
                         response.getWriter().write("{\"error\":\"Access denied\"}");
                     },
-                    new AntPathRequestMatcher("/api/**")
+                    new OrRequestMatcher(
+                        new AntPathRequestMatcher("/api/**"),
+                        new AntPathRequestMatcher("/actuator/**")
+                    )
                 )
                 .defaultAccessDeniedHandlerFor(
                     new AccessDeniedHandlerImpl(),

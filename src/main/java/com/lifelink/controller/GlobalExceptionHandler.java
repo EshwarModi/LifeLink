@@ -13,6 +13,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -24,9 +25,9 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ResourceNotFoundException.class)
+    @ExceptionHandler({ResourceNotFoundException.class, NoResourceFoundException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Object handleNotFound(ResourceNotFoundException ex, HttpServletRequest request, Model model) {
+    public Object handleNotFound(Exception ex, HttpServletRequest request, Model model) {
         log.warn("Resource not found at {}: {}", request.getRequestURI(), ex.getMessage());
         if (isApiRequest(request)) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(buildApiError(HttpStatus.NOT_FOUND, ex.getMessage()));
@@ -78,7 +79,8 @@ public class GlobalExceptionHandler {
     }
 
     private boolean isApiRequest(HttpServletRequest request) {
-        return request.getRequestURI().startsWith("/api/");
+        String uri = request.getRequestURI();
+        return uri.startsWith("/api/") || uri.startsWith("/actuator/");
     }
 
     private Map<String, Object> buildApiError(HttpStatus status, String message) {

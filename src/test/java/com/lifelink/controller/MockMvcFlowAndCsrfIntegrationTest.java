@@ -313,11 +313,13 @@ class MockMvcFlowAndCsrfIntegrationTest {
     // =========================================================================
 
     @Test
-    @DisplayName("Actuator Health: GET /actuator/health is publicly accessible and reports UP")
+    @DisplayName("Actuator Health: GET /actuator/health is publicly accessible and reports UP without exposing components")
     void testActuatorHealthEndpoint() throws Exception {
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("UP"));
+                .andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.components").doesNotExist())
+                .andExpect(jsonPath("$.details").doesNotExist());
     }
 }
 

@@ -131,6 +131,72 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    @DisplayName("Anonymous GET /actuator/health and probe sub-paths return 200 with status UP only (no components or details)")
+    void testAnonymousActuatorHealthReturnsStatusOnly() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("UP")))
+                .andExpect(jsonPath("$.components").doesNotExist())
+                .andExpect(jsonPath("$.details").doesNotExist());
+
+        mockMvc.perform(get("/actuator/health/liveness"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("UP")));
+
+        mockMvc.perform(get("/actuator/health/readiness"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("UP")));
+    }
+
+    @Test
+    @DisplayName("Anonymous GET /actuator/env and /actuator/beans are rejected with HTTP 401 JSON")
+    void testAnonymousActuatorEnvAndBeansRejectedWith401() throws Exception {
+        mockMvc.perform(get("/actuator/env"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error", is("Authentication required")));
+
+        mockMvc.perform(get("/actuator/beans"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error", is("Authentication required")));
+    }
+
+    @Test
+    @WithMockUser(username = "donor_user", roles = {"DONOR"})
+    @DisplayName("Non-admin (ROLE_DONOR) on /actuator/env is 403 and on /actuator/health sees status only")
+    void testNonAdminActuatorAccess() throws Exception {
+        mockMvc.perform(get("/actuator/env"))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.error", is("Access denied")));
+
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("UP")))
+                .andExpect(jsonPath("$.components").doesNotExist())
+                .andExpect(jsonPath("$.details").doesNotExist());
+    }
+
+    @Test
+    @WithMockUser(username = "admin_user", roles = {"ADMIN"})
+    @DisplayName("ROLE_ADMIN on GET /actuator/health sees full components and details; unexposed /actuator/env returns 404")
+    void testAdminActuatorHealthShowsDetailsAndUnexposedEndpointsReturn404() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("UP")))
+                .andExpect(jsonPath("$.components").exists())
+                .andExpect(jsonPath("$.components.db.status", is("UP")))
+                .andExpect(jsonPath("$.components.diskSpace.status", is("UP")));
+
+        mockMvc.perform(get("/actuator/env"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/actuator/beans"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     @DisplayName("Protected routes redirect unauthenticated users to /login")
     void testProtectedRoutesRequireAuth() throws Exception {
         mockMvc.perform(get("/donor/dashboard"))

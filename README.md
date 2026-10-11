@@ -182,31 +182,37 @@ mvn test -Dtest=MockMvcFlowAndCsrfIntegrationTest
 ## 6. Observability & Security Audit Logging
 
 ### Health Probes (`/actuator/health`)
-LifeLink exposes Spring Boot Actuator health checks accessible at:
+LifeLink exposes only the `health` endpoint (`management.endpoints.web.exposure.include=health`) and its liveness/readiness sub-paths (`/actuator/health/liveness`, `/actuator/health/readiness`):
 ```http
 GET http://localhost:8080/actuator/health
 ```
-Response:
-```json
-{
-  "status": "UP",
-  "components": {
-    "db": {
-      "status": "UP",
-      "details": {
-        "database": "MySQL",
-        "validationQuery": "isValid()"
+- **Anonymous / Unauthenticated Probe Response** (used by Docker/Compose healthchecks):
+  ```json
+  {
+    "status": "UP"
+  }
+  ```
+- **Authenticated `ROLE_ADMIN` Response** (`management.endpoint.health.show-details=when-authorized`, `management.endpoint.health.roles=ADMIN`):
+  ```json
+  {
+    "status": "UP",
+    "components": {
+      "db": {
+        "status": "UP",
+        "details": {
+          "database": "MySQL",
+          "validationQuery": "isValid()"
+        }
+      },
+      "diskSpace": {
+        "status": "UP"
+      },
+      "ping": {
+        "status": "UP"
       }
-    },
-    "diskSpace": {
-      "status": "UP"
-    },
-    "ping": {
-      "status": "UP"
     }
   }
-}
-```
+  ```
 
 ### Structured Security Audit Logs
 Sensitive authentication and privacy-critical transitions emit structured audit entries:
