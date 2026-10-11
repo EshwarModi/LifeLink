@@ -83,10 +83,10 @@ flowchart TD
 5. **Canonical Match Acceptance**: Single `POST /matches/{requestId}/accept` endpoint with ownership check and atomic upsert semantics.
 6. **Validation Parity for Blood Requests**: Creation and editing enforce identical business validation rules (units 1–20, required-by strictly in the future, non-blank hospital details).
 7. **Privacy by Default**: Phone numbers and private contacts are hidden in public listings and alerts, disclosed **only** after mutual match acceptance (`contactShared = true`).
-8. **Three-Tier Location-Aware Matching**:
-   - *Tier 1 (City)*: Matches eligible donors in the exact same city.
-   - *Tier 2 (State)*: If under 3 candidates, expands to the same state.
-   - *Tier 3 (Nationwide)*: If still under 3 candidates, expands nationwide.
+8. **Three-Tier Location-Aware Matching** (configured via `lifelink.matching.min-threshold=3` and `lifelink.matching.max-matches=25`):
+   - *Tier 1 (City)*: Matches **all** eligible donors in the exact same city, up to the safety cap (`25`).
+   - *Tier 2 (State, excluding city)*: Runs only if total matches `< 3`; matches all eligible donors in the same state, up to the safety cap (`25`).
+   - *Tier 3 (Nationwide, excluding state)*: Runs only if total matches `< 3`; tops up only until the total reaches the minimum threshold (`3`).
 9. **Donor Eligibility**: Available to donate AND (no prior donation OR last donation $\ge 90$ days ago).
 10. **Availability Cascading**: When a donor toggles available to `false`, all their `PENDING` matches immediately cascade to `EXPIRED`.
 11. **Automated Scheduled Expiration**: Periodic background job auto-expires overdue `OPEN` requests and flips their `PENDING` matches to `EXPIRED`.
@@ -237,15 +237,15 @@ Sensitive authentication and privacy-critical transitions emit structured audit 
 ## 7. Known Limitations & Future Work
 
 ### 7.1 Matching Modes & ABO/Rh Compatibility (Phase 12 Feature Flag)
-LifeLink supports two configurable matching modes via `lifelink.matching.mode` (default: `EXACT`):
+LifeLink supports two configurable matching modes via `lifelink.matching.mode` (default: `EXACT`), governed by `lifelink.matching.min-threshold` (default: `3`) and `lifelink.matching.max-matches` (default: `25`):
 
 1. **`EXACT` Mode (Default):**
    - Matching strictly pairs requests with donors of the identical blood group (`O+` to `O+`, `A-` to `A-`).
    - Ensures deterministic queries, simplicity for codebase auditing, and preserves scarce universal supplies.
 2. **`COMPATIBLE` Mode (`lifelink.matching.mode=COMPATIBLE`):**
    - Enables red blood cell (packed RBC) compatibility matching via [`BloodCompatibility`](file:///c:/yuvi/LifeLink/src/main/java/com/lifelink/service/BloodCompatibility.java).
-   - Candidate ranking: **Exact matches are always ranked first**, followed by compatible non-exact donors (e.g. `O-` for an `A+` request).
-   - Preserves location tier priority (City $\rightarrow$ State $\rightarrow$ Broad) within each blood group rank.
+   - Candidate ranking: **Exact matches are always ranked first** across the three location tiers. Expansion to compatible non-exact blood groups (e.g. `O-` for an `A+` request) occurs **only if** the exact-match total is below `lifelink.matching.min-threshold` (`3`), applying the identical three-tier rules and `lifelink.matching.max-matches` (`25`) cap.
+   - Preserves location tier priority (City $\rightarrow$ State $\rightarrow$ Nationwide) within each blood group phase.
    - Donors see a contextual badge in their dashboard: `Compatible match: your O- blood can be used for an A+ request`.
 
 > [!CAUTION]

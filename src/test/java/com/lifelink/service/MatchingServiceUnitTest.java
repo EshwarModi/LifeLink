@@ -83,6 +83,8 @@ class MatchingServiceUnitTest {
     @BeforeEach
     void setUp() {
         matchingProperties.setMode(MatchingMode.EXACT);
+        matchingProperties.setMinThreshold(MatchingService.MIN_MATCH_THRESHOLD);
+        matchingProperties.setMaxMatches(MatchingService.MAX_MATCHES_PER_REQUEST);
 
         seeker = User.builder()
                 .id(1L)
@@ -111,12 +113,15 @@ class MatchingServiceUnitTest {
     // =========================================================================
 
     @Test
-    @DisplayName("Tier Fallback: Tier 1 finds >= 3 donors, so Tier 2 and Tier 3 are never queried")
+    @DisplayName("Tier Fallback: Tier 1 finds >= 3 city donors (5 donors) -> matches all 5, never queries Tier 2 or Tier 3")
     void testTierFallback_Tier1Sufficient() {
-        // Given Tier 1 returns 3 donors (meeting TARGET_MATCH_THRESHOLD = 3)
+        User donor4 = User.builder().id(14L).username("donor_pune_4").city("Pune").state("Maharashtra").build();
+        User donor5 = User.builder().id(15L).username("donor_pune_5").city("Pune").state("Maharashtra").build();
+
+        // Given Tier 1 returns 5 donors (>= MIN_MATCH_THRESHOLD = 3 and <= MAX_MATCHES_PER_REQUEST = 25)
         when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
                 eq(List.of(BloodGroup.O_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
-                .thenReturn(List.of(donor1, donor2, donor3));
+                .thenReturn(List.of(donor1, donor2, donor3, donor4, donor5));
 
         when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
         when(matchRepository.save(any(Match.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -124,29 +129,29 @@ class MatchingServiceUnitTest {
         // When
         List<Match> matches = matchingService.findAndCreateMatches(openRequest);
 
-        // Then
-        assertThat(matches).hasSize(3);
+        // Then: all 5 city donors are matched (not stopped at 3), and Tier 2 / Tier 3 are skipped
+        assertThat(matches).hasSize(5);
         verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
         verify(userRepository, never()).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
         verify(userRepository, never()).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
-        verify(notificationService, times(3)).sendMatchNotification(any(User.class), eq(openRequest));
+        verify(notificationService, times(5)).sendMatchNotification(any(User.class), eq(openRequest));
     }
 
     @Test
-    @DisplayName("Tier Fallback: Tier 1 finds 1 donor (< 3), expands to Tier 2 (State) which fills the threshold")
-    void testTierFallback_Tier1Insufficient_ExpandsToTier2() {
-        User donorState1 = User.builder().id(21L).username("donor_mumbai").city("Mumbai").state("Maharashtra").build();
-        User donorState2 = User.builder().id(22L).username("donor_nagpur").city("Nagpur").state("Maharashtra").build();
+    @DisplayName("Tier Fallback: 50 city donors -> all matched up to the safety cap of 25")
+    void testTier1_FiftyCityDonors_AllMatchedUpToCapOf25() {
+        List<User> fiftyCityDonors = java.util.stream.IntStream.rangeClosed(1, 50)
+                .mapToObj(i -> User.builder()
+                        .id(1000L + i)
+                        .username("donor_pune_" + i)
+                        .city("Pune")
+                        .state("Maharashtra")
+                        .build())
+                .toList();
 
-        // Tier 1 returns 1 donor
         when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
                 eq(List.of(BloodGroup.O_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
-                .thenReturn(List.of(donor1));
-
-        // Tier 2 returns 2 more donors from same state
-        when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
-                eq(List.of(BloodGroup.O_POSITIVE)), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
-                .thenReturn(List.of(donorState1, donorState2));
+                .thenReturn(fiftyCityDonors);
 
         when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
         when(matchRepository.save(any(Match.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -154,16 +159,54 @@ class MatchingServiceUnitTest {
         // When
         List<Match> matches = matchingService.findAndCreateMatches(openRequest);
 
-        // Then
-        assertThat(matches).hasSize(3);
+        // Then: Capped at MAX_MATCHES_PER_REQUEST (25)
+        assertThat(matches).hasSize(25);
+        assertThat(matches.get(0).getDonor().getId()).isEqualTo(1001L);
+        assertThat(matches.get(24).getDonor().getId()).isEqualTo(1025L);
         verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
-        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
+        verify(userRepository, never()).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
         verify(userRepository, never()).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
-        verify(notificationService, times(3)).sendMatchNotification(any(User.class), eq(openRequest));
+        verify(notificationService, times(25)).sendMatchNotification(any(User.class), eq(openRequest));
     }
 
     @Test
-    @DisplayName("Tier Fallback: Tier 1 (1 donor) and Tier 2 (1 donor) < 3, expands to Tier 3 (Nationwide)")
+    @DisplayName("Tier Fallback: 2 city + 5 state donors -> 7 matched, no nationwide search")
+    void testTierFallback_Tier1Insufficient_ExpandsToTier2() {
+        List<User> fiveStateDonors = java.util.stream.IntStream.rangeClosed(1, 5)
+                .mapToObj(i -> User.builder()
+                        .id(20L + i)
+                        .username("donor_state_" + i)
+                        .city("Mumbai")
+                        .state("Maharashtra")
+                        .build())
+                .toList();
+
+        // Tier 1 returns 2 city donors (< MIN_MATCH_THRESHOLD = 3)
+        when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(List.of(donor1, donor2));
+
+        // Tier 2 returns 5 state donors
+        when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(fiveStateDonors);
+
+        when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
+        when(matchRepository.save(any(Match.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        List<Match> matches = matchingService.findAndCreateMatches(openRequest);
+
+        // Then: All 2 city + 5 state = 7 donors are matched, and Tier 3 (nationwide) is never queried
+        assertThat(matches).hasSize(7);
+        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
+        verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
+        verify(userRepository, never()).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
+        verify(notificationService, times(7)).sendMatchNotification(any(User.class), eq(openRequest));
+    }
+
+    @Test
+    @DisplayName("Tier Fallback: Tier 1 (1 donor) and Tier 2 (1 donor) < 3, expands to Tier 3 (Nationwide) and tops up only to 3")
     void testTierFallback_Tier1And2Insufficient_ExpandsToTier3() {
         User donorState1 = User.builder().id(21L).username("donor_mumbai").city("Mumbai").state("Maharashtra").build();
         User donorNationwide1 = User.builder().id(31L).username("donor_delhi").city("Delhi").state("Delhi").build();
@@ -190,11 +233,80 @@ class MatchingServiceUnitTest {
         // When
         List<Match> matches = matchingService.findAndCreateMatches(openRequest);
 
-        // Then: Total capped at TARGET_MATCH_THRESHOLD (3)
+        // Then: Tier 3 tops up only until total reaches MIN_MATCH_THRESHOLD (3)
         assertThat(matches).hasSize(3);
+        assertThat(matches).extracting(m -> m.getDonor().getId()).containsExactly(11L, 21L, 31L);
         verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndCity(any(), any(), any(), any());
         verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsAndStateExcludingCity(any(), any(), any(), any(), any());
         verify(userRepository, times(1)).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Tier Fallback: 0 city + 0 state + 10 nationwide -> exactly 3 matched")
+    void testTier3_ZeroCityZeroStateTenNationwide_ExactlyThreeMatched() {
+        List<User> tenNationwideDonors = java.util.stream.IntStream.rangeClosed(1, 10)
+                .mapToObj(i -> User.builder()
+                        .id(2000L + i)
+                        .username("donor_nationwide_" + i)
+                        .city("Delhi")
+                        .state("Delhi")
+                        .build())
+                .toList();
+
+        when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(List.of());
+        when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(List.of());
+        when(userRepository.findEligibleDonorsByBloodGroupsBroadExcludingState(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Maharashtra"), any(LocalDate.class), eq(1L)))
+                .thenReturn(tenNationwideDonors);
+
+        when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
+        when(matchRepository.save(any(Match.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        List<Match> matches = matchingService.findAndCreateMatches(openRequest);
+
+        // Then: Tier 3 tops up only to MIN_MATCH_THRESHOLD (3)
+        assertThat(matches).hasSize(3);
+        assertThat(matches).extracting(m -> m.getDonor().getId()).containsExactly(2001L, 2002L, 2003L);
+        verify(notificationService, times(3)).sendMatchNotification(any(User.class), eq(openRequest));
+    }
+
+    @Test
+    @DisplayName("Tier Fallback: 2 city + 30 state donors -> capped at MAX_MATCHES_PER_REQUEST (25)")
+    void testTier2_CapRespectedWhenCityPlusStateExceedsMaxMatches() {
+        List<User> thirtyStateDonors = java.util.stream.IntStream.rangeClosed(1, 30)
+                .mapToObj(i -> User.builder()
+                        .id(3000L + i)
+                        .username("donor_maharashtra_" + i)
+                        .city("Mumbai")
+                        .state("Maharashtra")
+                        .build())
+                .toList();
+
+        when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(List.of(donor1, donor2));
+        when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
+                eq(List.of(BloodGroup.O_POSITIVE)), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
+                .thenReturn(thirtyStateDonors);
+
+        when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
+        when(matchRepository.save(any(Match.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        List<Match> matches = matchingService.findAndCreateMatches(openRequest);
+
+        // Then: 2 city + 23 state = 25 (capped at maxMatches), no Tier 3 query
+        assertThat(matches).hasSize(25);
+        assertThat(matches.get(0).getDonor().getId()).isEqualTo(11L);
+        assertThat(matches.get(1).getDonor().getId()).isEqualTo(12L);
+        assertThat(matches.get(2).getDonor().getId()).isEqualTo(3001L);
+        assertThat(matches.get(24).getDonor().getId()).isEqualTo(3023L);
+        verify(userRepository, never()).findEligibleDonorsByBloodGroupsBroadExcludingState(any(), any(), any(), any());
     }
 
     @Test
@@ -286,9 +398,10 @@ class MatchingServiceUnitTest {
 
         User exactDonorA = User.builder().id(41L).username("donor_exact_a").city("Pune").state("Maharashtra").build();
         User compDonorONeg = User.builder().id(42L).username("donor_o_neg").city("Pune").state("Maharashtra").build();
-        User compDonorOPos = User.builder().id(43L).username("donor_o_pos").city("Mumbai").state("Maharashtra").build();
+        User compDonorOPos1 = User.builder().id(43L).username("donor_o_pos_1").city("Mumbai").state("Maharashtra").build();
+        User compDonorOPos2 = User.builder().id(44L).username("donor_o_pos_2").city("Nagpur").state("Maharashtra").build();
 
-        // Phase 1 (Exact A+): Tier 1 city returns 1 exact donor; Tier 2 & Tier 3 return empty
+        // Phase 1 (Exact A+): Tier 1 city returns 1 exact donor; Tier 2 & Tier 3 return empty (total = 1 < 3)
         when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
                 eq(List.of(BloodGroup.A_POSITIVE)), eq("Pune"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(exactDonorA));
@@ -300,27 +413,29 @@ class MatchingServiceUnitTest {
                 .thenReturn(List.of());
 
         // Phase 2 (Compatible non-exact for A+: A-, O+, O-):
-        // Tier 1 (City) returns O- donor
+        // Tier 1 (City) returns 1 O- donor (total = 2 < 3)
         List<BloodGroup> expectedCompatibleGroups = List.of(BloodGroup.A_NEGATIVE, BloodGroup.O_POSITIVE, BloodGroup.O_NEGATIVE);
         when(userRepository.findEligibleDonorsByBloodGroupsAndCity(
                 eq(expectedCompatibleGroups), eq("Pune"), any(LocalDate.class), eq(1L)))
                 .thenReturn(List.of(compDonorONeg));
 
-        // Tier 2 (State) returns O+ donor
+        // Tier 2 (State) runs because total (2) < MIN_MATCH_THRESHOLD (3), and collects all 2 state donors (total = 4)
         when(userRepository.findEligibleDonorsByBloodGroupsAndStateExcludingCity(
                 eq(expectedCompatibleGroups), eq("Maharashtra"), eq("Pune"), any(LocalDate.class), eq(1L)))
-                .thenReturn(List.of(compDonorOPos));
+                .thenReturn(List.of(compDonorOPos1, compDonorOPos2));
 
         when(matchRepository.existsByRequestIdAndDonorId(anyLong(), anyLong())).thenReturn(false);
         when(matchRepository.save(any(Match.class))).thenAnswer(i -> i.getArgument(0));
 
         List<Match> matches = matchingService.findAndCreateMatches(aPosRequest);
 
-        // Then: Total is 3, and exact match is strictly first!
-        assertThat(matches).hasSize(3);
+        // Then: Total is 4 (1 exact city + 1 compatible city + 2 compatible state), exact match strictly first, no Tier 3!
+        assertThat(matches).hasSize(4);
         assertThat(matches.get(0).getDonor().getId()).isEqualTo(41L); // Exact match first
-        assertThat(matches.get(1).getDonor().getId()).isEqualTo(42L); // Compatible tier 1
-        assertThat(matches.get(2).getDonor().getId()).isEqualTo(43L); // Compatible tier 2
+        assertThat(matches.get(1).getDonor().getId()).isEqualTo(42L); // Compatible tier 1 (city)
+        assertThat(matches.get(2).getDonor().getId()).isEqualTo(43L); // Compatible tier 2 (state)
+        assertThat(matches.get(3).getDonor().getId()).isEqualTo(44L); // Compatible tier 2 (state)
+        verify(userRepository, never()).findEligibleDonorsByBloodGroupsBroadExcludingState(eq(expectedCompatibleGroups), any(), any(), any());
     }
 
     @Test
