@@ -5,71 +5,179 @@
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
 
-    <main>
-        <div class="form-container" style="max-width: 600px;">
-            <div class="card">
-                <h2 style="color: var(--color-secondary); margin-bottom: 0.5rem;">Donor Profile Settings</h2>
-                <p style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
-                    Keep your blood group, age, and donation availability up to date.
-                </p>
+    <main class="container py-8" id="mainContent">
+        <div style="max-width: 820px; margin: 0 auto;">
+            <!-- Page Header -->
+            <div style="margin-bottom: var(--space-6);">
+                <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2);">
+                    <div style="width: 2.75rem; height: 2.75rem; border-radius: var(--radius-md); background-color: var(--color-primary-subtle); color: var(--color-primary); display: flex; align-items: center; justify-content: center;">
+                        <svg class="icon icon-md" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                    </div>
+                    <div>
+                        <h1 style="font-size: var(--font-size-h2); margin: 0;">Donor Profile Settings</h1>
+                        <p style="color: var(--color-text-muted); font-size: var(--font-size-small); margin: 0;">
+                            Maintain your verified clinical parameters, recovery timeline, and active donation status.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-                <div th:replace="~{fragments/layout :: alerts}"></div>
+            <!-- Important Note on Matching Engine & Safety Protocol -->
+            <div class="alert alert-info" style="margin-bottom: var(--space-6);">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield-check"></use></svg>
+                <div>
+                    <strong>Matching &amp; Safety Notice:</strong>
+                    Your blood group directly determines which patient transfusion inquiries you are matched with. In addition, recording your last donation date enforces the mandatory 90-day physiological recovery protocol to safeguard your health.
+                </div>
+            </div>
 
-                <!-- Profile Update Form with CSRF token -->
-                <form th:action="@{/donor/profile}" th:object="${profileDto}" method="post">
+            <div th:replace="~{fragments/layout :: alerts}"></div>
 
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="bloodGroup">Blood Group</label>
-                            <select id="bloodGroup" th:field="*{bloodGroup}" class="form-control" required>
-                                <option th:each="bg : ${bloodGroups}" th:value="${bg}" th:text="${bg.label}"></option>
-                            </select>
-                            <span class="field-error" th:if="${#fields.hasErrors('bloodGroup')}" th:errors="*{bloodGroup}"></span>
-                        </div>
+            <!-- Profile Form -->
+            <form th:action="@{/donor/profile}"
+                  th:object="${profileDto}"
+                  method="post"
+                  data-prevent-double-submit
+                  class="card"
+                  style="padding: var(--space-8) var(--space-6);">
 
-                        <div class="form-group">
-                            <label class="form-label" for="age">Age (18-65)</label>
-                            <input type="number" id="age" th:field="*{age}" class="form-control" min="18" max="65" required>
-                            <span class="field-error" th:if="${#fields.hasErrors('age')}" th:errors="*{age}"></span>
+                <!-- Group 1: Clinical Parameters -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="form-section-icon">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                        </span>
+                        <div>
+                            <h2 class="form-section-title">1. Clinical Parameters</h2>
+                            <p class="form-section-desc">ABO blood group, biological age, and gender classification.</p>
                         </div>
                     </div>
 
-                    <div class="form-grid">
+                    <!-- Blood Group 8-Chip Grid -->
+                    <div class="form-group">
+                        <label class="form-label" id="profileBloodGroupLabel">Blood Group *</label>
+                        <div class="blood-chip-grid" role="radiogroup" aria-labelledby="profileBloodGroupLabel">
+                            <div class="blood-chip-item" th:each="bg : ${bloodGroups}">
+                                <input type="radio"
+                                       th:field="*{bloodGroup}"
+                                       th:value="${bg}"
+                                       th:id="${'bg_' + bg}"
+                                       class="blood-chip-input sr-only"
+                                       required>
+                                <label th:for="${'bg_' + bg}" class="blood-chip">
+                                    <span class="blood-chip-icon">
+                                        <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                                    </span>
+                                    <span class="blood-chip-label" th:text="${bg.label}">A+</span>
+                                </label>
+                            </div>
+                        </div>
+                        <span class="form-text">Changing your blood group updates the regional matching pool immediately.</span>
+                        <div class="field-error" th:if="${#fields.hasErrors('bloodGroup')}" th:errors="*{bloodGroup}"></div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-4); margin-top: var(--space-5);">
                         <div class="form-group">
-                            <label class="form-label" for="gender">Gender</label>
+                            <label class="form-label" for="age">Age (18–65 years) *</label>
+                            <input type="number"
+                                   id="age"
+                                   th:field="*{age}"
+                                   class="form-control"
+                                   min="18"
+                                   max="65"
+                                   required>
+                            <span class="form-text">Eligible whole-blood donors must be between 18 and 65 years.</span>
+                            <div class="field-error" th:if="${#fields.hasErrors('age')}" th:errors="*{age}"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="gender">Gender *</label>
                             <select id="gender" th:field="*{gender}" class="form-control" required>
                                 <option th:each="g : ${genders}" th:value="${g}" th:text="${g.label}"></option>
                             </select>
-                            <span class="field-error" th:if="${#fields.hasErrors('gender')}" th:errors="*{gender}"></span>
+                            <div class="field-error" th:if="${#fields.hasErrors('gender')}" th:errors="*{gender}"></div>
                         </div>
+                    </div>
+                </div>
 
-                        <div class="form-group">
-                            <label class="form-label" for="lastDonationDate">Last Donation Date</label>
-                            <input type="date" id="lastDonationDate" th:field="*{lastDonationDate}" class="form-control">
-                            <span class="field-error" th:if="${#fields.hasErrors('lastDonationDate')}" th:errors="*{lastDonationDate}"></span>
+                <!-- Group 2: Donation History & Health Protocol -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="form-section-icon" style="background-color: var(--color-secondary-subtle); color: var(--color-secondary);">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+                        </span>
+                        <div>
+                            <h2 class="form-section-title">2. Donation History &amp; 90-Day Protocol</h2>
+                            <p class="form-section-desc">Track recovery intervals to prevent premature donation requests.</p>
                         </div>
                     </div>
 
-                    <div class="form-group" style="margin: 1rem 0;">
-                        <label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer;">
-                            <input type="checkbox" th:field="*{availableToDonate}" style="width: 1.25rem; height: 1.25rem;">
-                            <span>I am actively available and willing to donate blood</span>
+                    <div class="form-group">
+                        <label class="form-label" for="lastDonationDate">Last Whole-Blood Donation Date</label>
+                        <div style="max-width: 280px;">
+                            <input type="date"
+                                   id="lastDonationDate"
+                                   th:field="*{lastDonationDate}"
+                                   class="form-control">
+                        </div>
+                        <span class="form-text">Leave blank if you have not made a prior donation. LifeLink calculates eligibility from this date.</span>
+                        <div class="field-error" th:if="${#fields.hasErrors('lastDonationDate')}" th:errors="*{lastDonationDate}"></div>
+                    </div>
+                </div>
+
+                <!-- Group 3: Availability & Health Notes -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="form-section-icon" style="background-color: var(--color-surface-subtle); color: var(--color-text);">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield-check"></use></svg>
+                        </span>
+                        <div>
+                            <h2 class="form-section-title">3. Availability &amp; Health Notes</h2>
+                            <p class="form-section-desc">Configure matching alerts and optional clinical disclosures.</p>
+                        </div>
+                    </div>
+
+                    <!-- Availability Switch Box -->
+                    <div class="form-group" style="padding: var(--space-4); background-color: var(--color-surface-subtle); border-radius: var(--radius-md); border: 1px solid var(--color-border); margin-bottom: var(--space-5);">
+                        <label style="display: flex; align-items: flex-start; gap: var(--space-3); font-weight: var(--font-weight-semibold); cursor: pointer; margin: 0;">
+                            <input type="checkbox"
+                                   th:field="*{availableToDonate}"
+                                   id="availableToDonate"
+                                   style="width: 1.25rem; height: 1.25rem; margin-top: 0.15rem; accent-color: var(--color-secondary);">
+                            <span>
+                                <strong style="font-size: var(--font-size-body); color: var(--color-text);">I am actively available to donate blood</strong><br>
+                                <span style="font-weight: normal; font-size: var(--font-size-small); color: var(--color-text-muted);">
+                                    When checked, matching urgent transfusion requests in your regional vicinity will be routed to your dashboard.
+                                </span>
+                            </span>
                         </label>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="medicalConditions">Medical Conditions Notes (optional)</label>
-                        <textarea id="medicalConditions" th:field="*{medicalConditions}" class="form-control" rows="3"
-                                  placeholder="List any conditions, ongoing prescriptions, or travel history..."></textarea>
-                        <span class="field-error" th:if="${#fields.hasErrors('medicalConditions')}" th:errors="*{medicalConditions}"></span>
+                        <div class="char-counter-wrap">
+                            <textarea id="medicalConditions"
+                                      th:field="*{medicalConditions}"
+                                      class="form-control"
+                                      rows="3"
+                                      maxlength="1000"
+                                      placeholder="List any ongoing prescriptions, recent minor health events, travel history, or special considerations..."></textarea>
+                            <span id="medicalConditionsCounter" class="char-counter">0 / 1000 characters</span>
+                        </div>
+                        <span class="form-text">All notes are strictly confidential and used solely for donation screening safety.</span>
+                        <div class="field-error" th:if="${#fields.hasErrors('medicalConditions')}" th:errors="*{medicalConditions}"></div>
                     </div>
+                </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem;">
-                        <a th:href="@{/donor/dashboard}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Save Profile</button>
-                    </div>
-                </form>
-            </div>
+                <!-- Form Action Buttons -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-border-subtle); flex-wrap: wrap; gap: var(--space-3);">
+                    <a th:href="@{/donor/dashboard}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary btn-lg" data-loading-text="Saving Changes...">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-check"></use></svg>
+                        <span>Save Profile Settings</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </main>
 

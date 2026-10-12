@@ -3,48 +3,227 @@
 <head th:fragment="head(title)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- CSRF tokens for all fetch / AJAX calls -->
+    <!-- CSRF security tokens for form and fetch/AJAX validation -->
     <meta name="_csrf" th:content="${_csrf != null ? _csrf.token : ''}">
     <meta name="_csrf_header" th:content="${_csrf != null ? _csrf.headerName : ''}">
-    <title th:text="${title} ?: 'LifeLink — Blood Donation Platform'">LifeLink</title>
+    <title th:text="${title} ?: 'LifeLink — Real-Time Blood Donation Network'">LifeLink</title>
+
+    <!-- Google Fonts: Sora (headings) & Inter (body) with system fallbacks -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+
+    <!-- LifeLink Design System stylesheet -->
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <script th:src="@{/js/app.js}" defer></script>
 </head>
 <body>
 
-    <!-- Header Navigation Fragment -->
-    <header th:fragment="navbar" class="navbar">
-        <div class="nav-container">
-            <a th:href="@{/}" class="brand">
-                <span class="brand-icon">♥</span>
-                LifeLink
-            </a>
-            <nav>
-                <ul class="nav-links">
-                    <li><a th:href="@{/requests}">Open Requests</a></li>
+    <!-- Accessible skip link for keyboard navigation -->
+    <a href="#mainContent" class="skip-link">Skip to main content</a>
 
-                    <li sec:authorize="isAnonymous()">
-                        <a th:href="@{/login}" class="btn btn-secondary btn-sm">Log In</a>
-                    </li>
-                    <li sec:authorize="isAnonymous()">
-                        <a th:href="@{/register}" class="btn btn-primary btn-sm">Register</a>
+    <!-- Header Navigation Fragment (includes unified inline SVG sprite) -->
+    <header th:fragment="navbar" class="navbar">
+        <!-- Unified Inline SVG Sprite: Consistent 24x24 stroke/fill aesthetic; zero emojis -->
+        <svg th:fragment="svg-sprite" xmlns="http://www.w3.org/2000/svg" class="svg-sprite" aria-hidden="true" focusable="false">
+            <!-- Blood Droplet (Brand Icon) -->
+            <symbol id="icon-drop" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2.5C11.5 2.5 11 2.8 10.7 3.2C8.3 6.6 5 11.1 5 14.8C5 18.7 8.1 21.8 12 21.8C15.9 21.8 19 18.7 19 14.8C19 11.1 15.7 6.6 13.3 3.2C13 2.8 12.5 2.5 12 2.5ZM10 14C10 12.9 10.9 12 12 12C12.6 12 13 12.4 13 13C13 13.6 12.6 14 12 14C11.4 14 11 14.4 11 15C11 15.6 10.6 16 10 16C9.4 16 9 15.6 9 15C9 14.4 9.4 14 10 14Z"/>
+            </symbol>
+            <!-- Hospital Building -->
+            <symbol id="icon-hospital" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 21h18"/>
+                <path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"/>
+                <path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4"/>
+                <path d="M10 9h4"/>
+                <path d="M12 7v4"/>
+            </symbol>
+            <!-- Phone Call (Contact Disclosure) -->
+            <symbol id="icon-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.58 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </symbol>
+            <!-- Clock / Expiration -->
+            <symbol id="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+            </symbol>
+            <!-- Verified Check -->
+            <symbol id="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5"/>
+            </symbol>
+            <!-- Alert Triangle -->
+            <symbol id="icon-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                <path d="M12 9v4"/>
+                <path d="M12 17h.01"/>
+            </symbol>
+            <!-- Info Circle -->
+            <symbol id="icon-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 16v-4"/>
+                <path d="M12 8h.01"/>
+            </symbol>
+            <!-- User Profile -->
+            <symbol id="icon-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </symbol>
+            <!-- Community / Donors -->
+            <symbol id="icon-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </symbol>
+            <!-- Location Pin -->
+            <symbol id="icon-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                <circle cx="12" cy="10" r="3"/>
+            </symbol>
+            <!-- Calendar Date -->
+            <symbol id="icon-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                <line x1="16" x2="16" y1="2" y2="6"/>
+                <line x1="8" x2="8" y1="2" y2="6"/>
+                <line x1="3" x2="21" y1="10" y2="10"/>
+            </symbol>
+            <!-- Privacy Shield (Trust Indicator) -->
+            <symbol id="icon-shield-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="m9 12 2 2 4-4"/>
+            </symbol>
+            <!-- Pulse Activity -->
+            <symbol id="icon-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </symbol>
+            <!-- Arrow Right -->
+            <symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+                <polyline points="12 5 19 12 12 19"/>
+            </symbol>
+            <!-- Filter -->
+            <symbol id="icon-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </symbol>
+            <!-- Close / Dismiss -->
+            <symbol id="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </symbol>
+            <!-- Mobile Menu -->
+            <symbol id="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+            </symbol>
+            <!-- Lock (Security / Privacy) -->
+            <symbol id="icon-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </symbol>
+            <!-- Bell (Alerts / Notifications) -->
+            <symbol id="icon-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+            </symbol>
+            <!-- File / Document -->
+            <symbol id="icon-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                <path d="M10 9H8"/>
+                <path d="M16 13H8"/>
+                <path d="M16 17H8"/>
+            </symbol>
+            <!-- Plus (Add / Create) -->
+            <symbol id="icon-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/>
+                <path d="M12 5v14"/>
+            </symbol>
+            <!-- Heart (Blood donation / Health) -->
+            <symbol id="icon-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+            </symbol>
+            <!-- Edit -->
+            <symbol id="icon-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>
+                <path d="m15 5 4 4"/>
+            </symbol>
+            <!-- Eye (Show Password) -->
+            <symbol id="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </symbol>
+            <!-- Eye Off (Hide Password) -->
+            <symbol id="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                <line x1="2" x2="22" y1="2" y2="22"/>
+            </symbol>
+            <!-- Chevron Down (Collapsible / Accordion) -->
+            <symbol id="icon-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+            </symbol>
+        </svg>
+
+        <div class="nav-container">
+            <!-- Brand Link -->
+            <a th:href="@{/}" class="brand" aria-label="LifeLink Platform Home">
+                <span class="brand-icon" aria-hidden="true">
+                    <svg class="icon icon-fill"><use href="#icon-drop"></use></svg>
+                </span>
+                <span class="brand-text">LifeLink</span>
+            </a>
+
+            <!-- Mobile Drawer Toggle Button -->
+            <button type="button"
+                    class="nav-toggle"
+                    id="navToggle"
+                    aria-expanded="false"
+                    aria-controls="primaryNav"
+                    aria-label="Toggle navigation menu">
+                <svg class="icon nav-toggle-menu" aria-hidden="true"><use href="#icon-menu"></use></svg>
+                <svg class="icon nav-toggle-close" aria-hidden="true"><use href="#icon-close"></use></svg>
+            </button>
+
+            <!-- Navigation Links -->
+            <nav id="primaryNav" class="nav-menu" aria-label="Primary Navigation">
+                <ul class="nav-links">
+                    <li>
+                        <a th:href="@{/requests}">Open Requests</a>
                     </li>
 
                     <li sec:authorize="hasRole('DONOR')">
                         <a th:href="@{/donor/dashboard}">Donor Hub</a>
                     </li>
+                    <li sec:authorize="hasRole('DONOR')">
+                        <a th:href="@{/donor/profile}">Donor Profile</a>
+                    </li>
+
                     <li sec:authorize="hasRole('SEEKER')">
                         <a th:href="@{/seeker/dashboard}">Seeker Hub</a>
                     </li>
+                    <li sec:authorize="hasRole('SEEKER')">
+                        <a th:href="@{/requests/new}" class="nav-btn-highlight">+ Post Request</a>
+                    </li>
+
                     <li sec:authorize="hasRole('ADMIN')">
                         <a th:href="@{/admin/dashboard}">Admin</a>
                     </li>
 
-                    <li sec:authorize="isAuthenticated()">
-                        <span class="user-badge" sec:authentication="name">User</span>
+                    <li sec:authorize="isAnonymous()">
+                        <a th:href="@{/login}" class="btn btn-ghost btn-sm">Log In</a>
                     </li>
-                    <li sec:authorize="isAuthenticated()">
-                        <form th:action="@{/logout}" method="post" style="display:inline;">
+                    <li sec:authorize="isAnonymous()">
+                        <a th:href="@{/register}" class="btn btn-primary btn-sm">Become a Donor</a>
+                    </li>
+
+                    <li sec:authorize="isAuthenticated()" class="nav-user-group">
+                        <span class="user-badge" title="Signed in user">
+                            <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-user"></use></svg>
+                            <span sec:authentication="name">User</span>
+                        </span>
+                        <form th:action="@{/logout}" method="post" class="nav-logout-form">
                             <button type="submit" class="btn btn-secondary btn-sm">Sign Out</button>
                         </form>
                     </li>
@@ -53,31 +232,113 @@
         </div>
     </header>
 
-    <!-- Flash Messages Fragment -->
-    <div th:fragment="alerts">
-        <div th:if="${successMessage}" class="alert alert-success">
-            <span th:text="${successMessage}">Operation successful!</span>
+    <!-- Dismissible Flash Alerts Fragment -->
+    <div th:fragment="alerts" class="toast-region" aria-live="polite">
+        <div th:if="${successMessage != null or success != null}" class="alert alert-success" data-toast role="status">
+            <div class="alert-content">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-check"></use></svg>
+                <span th:text="${successMessage != null ? successMessage : success}">Operation completed successfully.</span>
+            </div>
+            <button type="button" class="alert-dismiss" data-dismiss-alert aria-label="Dismiss message">
+                <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-close"></use></svg>
+            </button>
         </div>
-        <div th:if="${errorMessage}" class="alert alert-error">
-            <span th:text="${errorMessage}">An error occurred.</span>
+
+        <div th:if="${errorMessage != null or error != null}" class="alert alert-error" data-toast role="alert">
+            <div class="alert-content">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                <span th:text="${errorMessage != null ? errorMessage : error}">An error occurred.</span>
+            </div>
+            <button type="button" class="alert-dismiss" data-dismiss-alert aria-label="Dismiss message">
+                <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-close"></use></svg>
+            </button>
         </div>
-        <div th:if="${infoMessage}" class="alert alert-info">
-            <span th:text="${infoMessage}">Information note.</span>
+
+        <div th:if="${infoMessage != null or info != null or (message != null and status == null)}" class="alert alert-info" data-toast role="status">
+            <div class="alert-content">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-info"></use></svg>
+                <span th:text="${infoMessage != null ? infoMessage : (info != null ? info : message)}">Important notification.</span>
+            </div>
+            <button type="button" class="alert-dismiss" data-dismiss-alert aria-label="Dismiss message">
+                <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-close"></use></svg>
+            </button>
         </div>
-        <div th:if="${param.registered}" class="alert alert-success">
-            <span>Account registered successfully! Please log in below.</span>
+
+        <div th:if="${param.registered}" class="alert alert-success" data-toast role="status">
+            <div class="alert-content">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-check"></use></svg>
+                <span>Account registered successfully! Please sign in below.</span>
+            </div>
+            <button type="button" class="alert-dismiss" data-dismiss-alert aria-label="Dismiss message">
+                <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-close"></use></svg>
+            </button>
         </div>
-        <div th:if="${param.logout}" class="alert alert-info">
-            <span>You have been signed out.</span>
+
+        <div th:if="${param.logout}" class="alert alert-info" data-toast role="status">
+            <div class="alert-content">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-check"></use></svg>
+                <span>You have been signed out successfully.</span>
+            </div>
+            <button type="button" class="alert-dismiss" data-dismiss-alert aria-label="Dismiss message">
+                <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-close"></use></svg>
+            </button>
         </div>
-        <div th:if="${param.error}" class="alert alert-error">
-            <span>Invalid username or password.</span>
+
+        <div th:if="${param.error}" class="alert alert-error" data-toast role="alert">
+            <div class="alert-content">
+                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                <span>Invalid username or password. Please verify your credentials and try again.</span>
+            </div>
+            <button type="button" class="alert-dismiss" data-dismiss-alert aria-label="Dismiss message">
+                <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-close"></use></svg>
+            </button>
         </div>
     </div>
 
-    <!-- Footer Fragment -->
+    <!-- Reusable Trustworthy Footer Fragment -->
     <footer th:fragment="footer" class="footer">
-        <p>&copy; 2026 LifeLink Platform. 100% Java Full-Stack Blood Donation Network.</p>
+        <div class="footer-container">
+            <div class="footer-brand-col">
+                <a th:href="@{/}" class="brand" aria-label="LifeLink Platform Home">
+                    <span class="brand-icon" aria-hidden="true">
+                        <svg class="icon icon-fill"><use href="#icon-drop"></use></svg>
+                    </span>
+                    <span class="brand-text">LifeLink</span>
+                </a>
+                <p class="footer-tagline">
+                    Real-time, privacy-first blood donation network matching emergency clinical requests with eligible local donors.
+                </p>
+                <div class="footer-trust-badge">
+                    <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-shield-check"></use></svg>
+                    <span>Contact details are disclosed only upon verified donor match acceptance.</span>
+                </div>
+            </div>
+
+            <div class="footer-links-col">
+                <h4 class="footer-heading">Platform</h4>
+                <ul class="footer-links">
+                    <li><a th:href="@{/}">Home</a></li>
+                    <li><a th:href="@{/requests}">Open Requests</a></li>
+                    <li sec:authorize="isAnonymous()"><a th:href="@{/login}">Sign In</a></li>
+                    <li sec:authorize="isAnonymous()"><a th:href="@{/register}">Register as Donor</a></li>
+                    <li sec:authorize="isAuthenticated()"><a th:href="@{/dashboard}">My Dashboard</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-disclaimer-col">
+                <h4 class="footer-heading">Medical Disclaimer</h4>
+                <p class="footer-disclaimer-text">
+                    LifeLink is a volunteer communication and coordination tool. In an acute, life-threatening emergency, always contact local emergency services immediately. All clinical compatibility and transfusions are verified on-site by accredited healthcare providers.
+                </p>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div class="footer-bottom-container">
+                <span>&copy; 2026 LifeLink Platform. 100% Java Full-Stack Architecture. All rights reserved.</span>
+                <span>Protected by Spring Security &amp; End-to-End CSRF Verification.</span>
+            </div>
+        </div>
     </footer>
 
 </body>

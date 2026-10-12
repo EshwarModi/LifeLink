@@ -1,137 +1,309 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Seeker Hub — LifeLink')}"></head>
+<head th:replace="~{fragments/layout :: head('Patient & Seeker Hub — LifeLink')}"></head>
 <body>
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
 
-    <main>
+    <main class="container py-8" id="mainContent">
         <div th:replace="~{fragments/layout :: alerts}"></div>
 
-        <!-- Seeker Top Card -->
-        <div class="card" style="margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <!-- Seeker Welcome Header Card -->
+        <div class="dashboard-header-card">
+            <div class="dashboard-header-flex">
                 <div>
-                    <h1 style="font-size: 1.8rem; color: var(--color-secondary);">Patient & Seeker Hub</h1>
-                    <p style="color: var(--color-text-muted);">
-                        Logged in as: <strong th:text="${user.fullName}">Seeker Name</strong> |
-                        City: <strong th:text="${user.city + ', ' + user.state}">City, State</strong>
-                    </p>
+                    <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+                        <span class="badge badge-teal">Seeker Portal</span>
+                        <span style="font-size: var(--font-size-small); color: var(--color-text-muted);">Emergency &amp; Planned Care</span>
+                    </div>
+                    <h1 style="font-size: var(--font-size-h2); margin: 0 0 var(--space-2) 0;">
+                        Welcome back, <span th:text="${user.fullName}">Seeker Name</span>
+                    </h1>
+                    <div class="dashboard-meta">
+                        <span>
+                            <svg class="icon icon-xs" aria-hidden="true" style="color: var(--color-primary);"><use href="#icon-user"></use></svg>
+                            Username: <strong th:text="${user.username}">seeker_user</strong>
+                        </span>
+                        <span class="dashboard-meta-divider" aria-hidden="true">•</span>
+                        <span>
+                            <svg class="icon icon-xs" aria-hidden="true" style="color: var(--color-text-muted);"><use href="#icon-map-pin"></use></svg>
+                            Region: <strong th:text="${user.city + ', ' + user.state}">City, State</strong>
+                        </span>
+                    </div>
                 </div>
                 <div>
-                    <a th:href="@{/requests/new}" class="btn btn-primary btn-lg">+ Post New Blood Request</a>
+                    <a th:href="@{/requests/new}" class="btn btn-primary btn-lg">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                        <span>Post a New Request</span>
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Active Requests Section (OPEN) -->
-        <section class="card">
-            <h2 style="font-size: 1.4rem; color: var(--color-secondary); margin-bottom: 1rem;">
-                Active Blood Requests
-            </h2>
+        <!-- Summary Stat Cards (Computed with SpEL / Thymeleaf Collections) -->
+        <section aria-label="Request Summary Metrics" style="margin-bottom: var(--space-8);">
+            <div class="grid-4">
+                <!-- Open / Active Count -->
+                <div class="stat-card">
+                    <div class="stat-value stat-value-crimson"
+                         th:text="${activeRequests != null ? #lists.size(activeRequests) : 0}">0</div>
+                    <div class="stat-label">Active Open Requests</div>
+                </div>
 
-            <div th:if="${activeRequests == null or #lists.isEmpty(activeRequests)}" class="empty-state">
-                <div class="empty-state-icon">📋</div>
-                <h3>No Active Requests</h3>
-                <p>You do not have any open blood requests right now.</p>
-                <a th:href="@{/requests/new}" class="btn btn-primary btn-sm">+ Post a Request</a>
-            </div>
+                <!-- Fulfilled Count -->
+                <div class="stat-card">
+                    <div class="stat-value stat-value-teal"
+                         th:text="${requests != null and not #lists.isEmpty(requests) ? #lists.size(requests.?[status.name() == 'FULFILLED']) : 0}">0</div>
+                    <div class="stat-label">Fulfilled Transfusions</div>
+                </div>
 
-            <div th:if="${activeRequests != null and not #lists.isEmpty(activeRequests)}" class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Blood Group</th>
-                            <th>Units</th>
-                            <th>Urgency</th>
-                            <th>Hospital</th>
-                            <th>Required By</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="r : ${activeRequests}">
-                            <td><strong th:text="'#' + ${r.id}">#1</strong></td>
-                            <td><span class="badge badge-blood" th:text="${r.bloodGroup.label}">A+</span></td>
-                            <td><strong th:text="${r.unitsNeeded}">2</strong> unit(s)</td>
-                            <td>
-                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(r.urgency.name())}"
-                                      th:text="${r.urgency.label}">HIGH</span>
-                            </td>
-                            <td>
-                                <strong th:text="${r.hospitalName}">City Hospital</strong><br>
-                                <small style="color: var(--color-text-muted);" th:text="${r.hospitalAddress}">Address</small>
-                            </td>
-                            <td th:text="${r.requiredBy}">2026-10-15</td>
-                            <td>
-                                <span class="badge badge-open" th:text="${r.status.label}">OPEN</span>
-                            </td>
-                            <td>
-                                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap;">
-                                    <a th:href="@{/requests/{id}(id=${r.id})}" class="btn btn-secondary btn-sm">View Donors</a>
-                                    <a th:href="@{/requests/{id}/edit(id=${r.id})}" class="btn btn-secondary btn-sm">Edit</a>
-                                    <!-- Mark Fulfilled Form with CSRF token -->
-                                    <form th:action="@{/requests/{id}/fulfill(id=${r.id})}" method="post" style="display:inline;">
-                                        <button type="submit" class="btn btn-success btn-sm">Fulfill</button>
-                                    </form>
-                                    <!-- Cancel Request Form with CSRF token -->
-                                    <form th:action="@{/requests/{id}/cancel(id=${r.id})}" method="post" style="display:inline;">
-                                        <button type="submit" class="btn btn-danger btn-sm">Cancel</button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <!-- Cancelled or Expired Count -->
+                <div class="stat-card">
+                    <div class="stat-value stat-value-gray"
+                         th:text="${requests != null and not #lists.isEmpty(requests) ? #lists.size(requests.?[status.name() == 'CANCELLED' or status.name() == 'EXPIRED']) : 0}">0</div>
+                    <div class="stat-label">Cancelled / Expired</div>
+                </div>
+
+                <!-- Total Lifetime Requests -->
+                <div class="stat-card">
+                    <div class="stat-value stat-value-blue"
+                         th:text="${requests != null ? #lists.size(requests) : 0}">0</div>
+                    <div class="stat-label">Total Requests Posted</div>
+                </div>
             </div>
         </section>
 
-        <!-- Request History Section (FULFILLED, CANCELLED, EXPIRED) -->
-        <section class="card" style="margin-top: 2rem;">
-            <h2 style="font-size: 1.4rem; color: var(--color-secondary); margin-bottom: 1rem;">
-                Past Request History
-            </h2>
-
-            <div th:if="${historicalRequests == null or #lists.isEmpty(historicalRequests)}" class="empty-state">
-                <div class="empty-state-icon">🗂</div>
-                <h3>No Historical Requests</h3>
-                <p>Completed, fulfilled, and expired requests will appear here for your records.</p>
+        <!-- Entire Dashboard Empty State (When user has never posted a request) -->
+        <section th:if="${requests == null or #lists.isEmpty(requests)}" class="card empty-state" style="padding: var(--space-12) var(--space-6); margin-bottom: var(--space-8);">
+            <div class="empty-state-icon">
+                <svg class="icon icon-xl" aria-hidden="true"><use href="#icon-drop"></use></svg>
             </div>
-
-            <div th:if="${historicalRequests != null and not #lists.isEmpty(historicalRequests)}" class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Blood Group</th>
-                            <th>Units</th>
-                            <th>Hospital</th>
-                            <th>Required By</th>
-                            <th>Final Status</th>
-                            <th>Details</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="r : ${historicalRequests}">
-                            <td><strong th:text="'#' + ${r.id}">#1</strong></td>
-                            <td><span class="badge badge-blood" th:text="${r.bloodGroup.label}">A+</span></td>
-                            <td th:text="${r.unitsNeeded}">2</td>
-                            <td th:text="${r.hospitalName}">Hospital</td>
-                            <td th:text="${r.requiredBy}">2026-10-15</td>
-                            <td>
-                                <span th:class="'badge badge-' + ${#strings.toLowerCase(r.status.name())}"
-                                      th:text="${r.status.label}">FULFILLED</span>
-                            </td>
-                            <td>
-                                <a th:href="@{/requests/{id}(id=${r.id})}" class="btn btn-secondary btn-sm">View Details</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <h2 style="font-size: var(--font-size-h3); margin-bottom: var(--space-2);">You haven't posted a request yet</h2>
+            <p style="color: var(--color-text-muted); max-width: 520px; margin: 0 auto var(--space-6);">
+                When you or someone in your care requires urgent or scheduled blood transfusion, submit a posting here to alert verified compatible donors in your area.
+            </p>
+            <div>
+                <a th:href="@{/requests/new}" class="btn btn-primary btn-lg">
+                    <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                    <span>Post Your First Blood Request</span>
+                </a>
             </div>
         </section>
+
+        <!-- Active Requests Section (When requests exist) -->
+        <section th:if="${requests != null and not #lists.isEmpty(requests)}" style="margin-bottom: var(--space-8);" aria-labelledby="activeRequestsHeading">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); flex-wrap: wrap; gap: var(--space-3);">
+                <div>
+                    <h2 id="activeRequestsHeading" style="font-size: var(--font-size-h3); margin: 0; display: flex; align-items: center; gap: var(--space-2);">
+                        <span>Active Blood Requests</span>
+                        <span class="badge badge-primary" th:text="${activeRequests != null ? #lists.size(activeRequests) : 0}">0</span>
+                    </h2>
+                    <p style="font-size: var(--font-size-small); color: var(--color-text-muted); margin: 2px 0 0 0;">
+                        Currently open transfusion postings actively seeking matching donors nearby.
+                    </p>
+                </div>
+                <div>
+                    <a th:href="@{/requests/new}" class="btn btn-secondary btn-sm">
+                        <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                        <span>Post Another Request</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Empty State for Active Requests -->
+            <div th:if="${activeRequests == null or #lists.isEmpty(activeRequests)}" class="card empty-state" style="padding: var(--space-8) var(--space-4);">
+                <div class="empty-state-icon">
+                    <svg class="icon icon-lg" aria-hidden="true"><use href="#icon-check"></use></svg>
+                </div>
+                <h3 style="font-size: var(--font-size-h4);">No Active Requests</h3>
+                <p style="color: var(--color-text-muted); margin-bottom: var(--space-4);">All your prior requests have been completed or closed. Post a new request when needed.</p>
+                <a th:href="@{/requests/new}" class="btn btn-primary btn-sm">
+                    <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                    <span>Post a New Request</span>
+                </a>
+            </div>
+
+            <!-- Active Requests Card Grid -->
+            <div th:if="${activeRequests != null and not #lists.isEmpty(activeRequests)}" class="request-grid">
+                <article th:each="r : ${activeRequests}" class="request-card">
+                    <!-- Left Urgency Color Bar -->
+                    <div th:class="'request-card-strip strip-' + ${#strings.toLowerCase(r.urgency.name())}" aria-hidden="true"></div>
+
+                    <!-- Card Header -->
+                    <div class="request-card-header">
+                        <div class="request-card-badges">
+                            <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(r.urgency.name())}">
+                                <svg th:if="${r.urgency.name() == 'CRITICAL' or r.urgency.name() == 'HIGH'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                                <svg th:if="${r.urgency.name() == 'MEDIUM'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg>
+                                <svg th:if="${r.urgency.name() == 'LOW'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+                                <span th:text="${r.urgency.label}">HIGH</span>
+                            </span>
+                            <span class="badge badge-status-open" th:text="${r.status.label}">OPEN</span>
+                        </div>
+
+                        <div class="request-card-date">
+                            <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+                            <span th:text="${r.requiredBy}">2026-10-15</span>
+                            <span class="relative-hint" th:attr="data-relative-date=${r.requiredBy}"></span>
+                        </div>
+                    </div>
+
+                    <!-- Card Body -->
+                    <div class="request-card-body">
+                        <!-- Blood Drop Avatar -->
+                        <div class="blood-drop-avatar" th:title="${r.bloodGroup.label}">
+                            <svg class="icon icon-xs" style="margin-bottom: 2px;" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                            <span th:text="${r.bloodGroup.label}">A+</span>
+                        </div>
+
+                        <div class="request-card-details">
+                            <div class="request-card-units">
+                                <span th:text="${r.unitsNeeded}">2</span> unit(s) of <span th:text="${r.bloodGroup.label}">A+</span> needed
+                            </div>
+                            <div class="request-card-hospital" th:text="${r.hospitalName}">Apollo Memorial Hospital</div>
+                            <div class="request-card-location">
+                                <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-map-pin"></use></svg>
+                                <span th:text="${r.hospitalAddress}">Street Address</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Footer & Quick Actions -->
+                    <div class="request-card-footer" style="flex-wrap: wrap;">
+                        <span style="font-size: var(--font-size-caption); color: var(--color-text-muted);">
+                            Request <strong th:text="'#' + ${r.id}">#1</strong>
+                        </span>
+
+                        <div class="action-cluster">
+                            <!-- View Donors / Matches -->
+                            <a th:href="@{/requests/{id}(id=${r.id})}" class="btn btn-secondary btn-sm" title="View matched donors and detailed status">
+                                <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-users"></use></svg>
+                                <span>Matches</span>
+                            </a>
+
+                            <!-- Edit Request -->
+                            <a th:href="@{/requests/{id}/edit(id=${r.id})}" class="btn btn-secondary btn-sm" title="Edit request details">
+                                <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-edit"></use></svg>
+                                <span>Edit</span>
+                            </a>
+
+                            <!-- Mark Fulfilled Form (POST + CSRF + Confirm Dialog) -->
+                            <form th:action="@{/requests/{id}/fulfill(id=${r.id})}"
+                                  method="post"
+                                  th:attr="data-confirm='Mark blood request #' + ${r.id} + ' as fulfilled? This indicates you have received the required blood units.'"
+                                  data-confirm-title="Mark Request as Fulfilled"
+                                  data-confirm-label="Yes, Mark Fulfilled"
+                                  style="display: inline;">
+                                <button type="submit" class="btn btn-teal btn-sm" title="Mark this request as fulfilled">
+                                    <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+                                    <span>Fulfill</span>
+                                </button>
+                            </form>
+
+                            <!-- Cancel Request Form (POST + CSRF + Confirm Dialog) -->
+                            <form th:action="@{/requests/{id}/cancel(id=${r.id})}"
+                                  method="post"
+                                  th:attr="data-confirm='Are you sure you want to cancel blood request #' + ${r.id} + '? Any pending matching notifications will be closed.'"
+                                  data-confirm-title="Cancel Blood Request"
+                                  data-confirm-label="Yes, Cancel Request"
+                                  style="display: inline;">
+                                <button type="submit" class="btn btn-danger btn-sm" title="Cancel this request">
+                                    <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-close"></use></svg>
+                                    <span>Cancel</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Request History Section (FULFILLED, CANCELLED, EXPIRED - Collapsible) -->
+        <details th:if="${requests != null and not #lists.isEmpty(requests)}"
+                 class="collapsible-card"
+                 th:attr="open=${activeRequests == null or #lists.isEmpty(activeRequests)} ? 'open' : null">
+            <summary class="collapsible-summary">
+                <div style="display: flex; align-items: center; gap: var(--space-3);">
+                    <div style="width: 2rem; height: 2rem; border-radius: var(--radius-md); background-color: var(--color-surface-subtle); border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary);">
+                        <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+                    </div>
+                    <div>
+                        <h2 style="font-size: var(--font-size-h4); margin: 0; display: inline-flex; align-items: center; gap: var(--space-2);">
+                            <span>Past Request History</span>
+                            <span class="badge badge-neutral"
+                                  th:text="${historicalRequests != null ? #lists.size(historicalRequests) : 0}">0</span>
+                        </h2>
+                        <p style="font-size: var(--font-size-caption); color: var(--color-text-muted); margin: 2px 0 0 0;">
+                            Completed, fulfilled, and expired transfusion records (click to expand / collapse).
+                        </p>
+                    </div>
+                </div>
+                <div class="collapsible-chevron">
+                    <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-chevron-down"></use></svg>
+                </div>
+            </summary>
+
+            <div class="collapsible-body">
+                <!-- Empty State for History -->
+                <div th:if="${historicalRequests == null or #lists.isEmpty(historicalRequests)}" class="empty-state" style="padding: var(--space-6) var(--space-4);">
+                    <div class="empty-state-icon">
+                        <svg class="icon icon-md" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+                    </div>
+                    <h3 style="font-size: var(--font-size-body);">No Historical Records</h3>
+                    <p style="font-size: var(--font-size-small); color: var(--color-text-muted);">
+                        When your active requests are fulfilled or closed, they will appear archived here for your reference.
+                    </p>
+                </div>
+
+                <!-- History Table -->
+                <div th:if="${historicalRequests != null and not #lists.isEmpty(historicalRequests)}" class="table-responsive">
+                    <table class="table" aria-label="Past Request History">
+                        <thead>
+                            <tr>
+                                <th scope="col">Request ID</th>
+                                <th scope="col">Blood Group</th>
+                                <th scope="col">Units</th>
+                                <th scope="col">Hospital &amp; Address</th>
+                                <th scope="col">Required By</th>
+                                <th scope="col">Final Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${historicalRequests}">
+                                <td><strong th:text="'#' + ${r.id}">#1</strong></td>
+                                <td>
+                                    <span class="blood-badge" th:text="${r.bloodGroup.label}">A+</span>
+                                </td>
+                                <td>
+                                    <strong th:text="${r.unitsNeeded}">2</strong>
+                                    <span style="color: var(--color-text-muted);"> unit(s)</span>
+                                </td>
+                                <td>
+                                    <strong th:text="${r.hospitalName}">Apollo Clinic</strong><br>
+                                    <span style="font-size: var(--font-size-caption); color: var(--color-text-muted);" th:text="${r.hospitalAddress}">Address</span>
+                                </td>
+                                <td>
+                                    <span style="display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--font-size-small);">
+                                        <svg class="icon icon-xs" style="color: var(--color-text-muted);" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+                                        <span th:text="${r.requiredBy}">2026-10-15</span>
+                                    </span>
+                                </td>
+                                <td>
+                                    <span th:class="'badge badge-status-' + ${#strings.toLowerCase(r.status.name())}"
+                                          th:text="${r.status.label}">FULFILLED</span>
+                                </td>
+                                <td>
+                                    <a th:href="@{/requests/{id}(id=${r.id})}" class="btn btn-secondary btn-sm">
+                                        <span>View Details</span>
+                                    </a>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </details>
     </main>
 
     <footer th:replace="~{fragments/layout :: footer}"></footer>

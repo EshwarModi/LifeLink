@@ -1,160 +1,334 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head th:replace="~{fragments/layout :: head('Request Details — LifeLink')}"></head>
+<head th:replace="~{fragments/layout :: head('Blood Request #' + ${request.id} + ' — LifeLink')}"></head>
 <body>
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
 
-    <main>
+    <main id="mainContent" class="container py-8">
         <div th:replace="~{fragments/layout :: alerts}"></div>
 
-        <div class="card" style="margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
-                <div>
-                    <span class="badge badge-blood" style="font-size: 1rem; margin-bottom: 0.5rem;" th:text="${request.bloodGroup.label}">A+</span>
-                    <h1 style="font-size: 1.8rem; color: var(--color-secondary);">
-                        Blood Request #<span th:text="${request.id}">1</span>
-                    </h1>
-                    <p style="color: var(--color-text-muted);">
-                        Posted on: <strong th:text="${#temporals.format(request.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-10</strong> |
-                        Current Status:
-                        <span th:class="'badge badge-' + ${#strings.toLowerCase(request.status.name())}" th:text="${request.status.label}">OPEN</span>
-                    </p>
-                </div>
-                <div th:if="${isOwner and request.status.name() == 'OPEN'}">
-                    <a th:href="@{/requests/{id}/edit(id=${request.id})}" class="btn btn-secondary btn-sm">Edit Request</a>
-                </div>
-            </div>
-
-            <hr style="border: none; border-top: 1px solid var(--color-border); margin: 1.25rem 0;">
-
-            <div class="form-grid" style="margin-bottom: 1.5rem;">
-                <div>
-                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase;">Blood Group & Units</span>
-                    <div style="font-size: 1.2rem; font-weight: 700; color: var(--color-primary); margin-top: 0.25rem;">
-                        <span th:text="${request.unitsNeeded}">2</span> unit(s) of <span th:text="${request.bloodGroup.label}">A+</span>
-                    </div>
-                </div>
-
-                <div>
-                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase;">Urgency Level</span>
-                    <div style="margin-top: 0.25rem;">
-                        <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(request.urgency.name())}"
-                              style="font-size: 0.95rem; padding: 0.35rem 0.75rem;"
-                              th:text="${request.urgency.label}">HIGH</span>
-                    </div>
-                </div>
-
-                <div>
-                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--color-text-muted); text-transform: uppercase;">Required By Date</span>
-                    <div style="font-size: 1.1rem; font-weight: 600; margin-top: 0.25rem;">
-                        <span th:text="${request.requiredBy}">2026-10-15</span>
-                    </div>
-                </div>
-            </div>
-
-            <div style="background: var(--color-bg-subtle); padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
-                <h3 style="font-size: 1.1rem; color: var(--color-secondary); margin-bottom: 0.5rem;">Hospital & Medical Facility</h3>
-                <p><strong>Hospital Name:</strong> <span th:text="${request.hospitalName}">Apollo Clinic</span></p>
-                <p><strong>Address:</strong> <span th:text="${request.hospitalAddress}">123 Health Ave</span>,
-                   <span th:text="${request.seeker.city + ', ' + request.seeker.state}">City, State</span></p>
-                <p th:if="${request.reason}" style="margin-top: 0.5rem;">
-                    <strong>Clinical Context / Reason:</strong> <span th:text="${request.reason}">Surgery notes...</span>
-                </p>
-            </div>
-
-            <!-- Contact Disclosure Section (Revealed ONLY upon acceptance) -->
-            <div style="border: 2px dashed var(--color-border); border-radius: var(--radius-md); padding: 1.5rem; background: var(--color-bg-card);">
-                <h3 style="font-size: 1.15rem; color: var(--color-secondary); margin-bottom: 0.5rem;">Contact Information</h3>
-
-                <div th:if="${contactRevealed}">
-                    <div class="alert alert-success" style="margin-bottom: 1rem;">
-                        ✓ Mutual match accepted! Direct contact details are disclosed below.
-                    </div>
-                    <div class="form-grid">
+        <!-- 2-Column Responsive Layout -->
+        <div class="request-detail-grid">
+            <!-- Left Column: Request Details & Contact & Matches -->
+            <div class="request-detail-main">
+                <!-- Request Summary Card -->
+                <article class="card" style="margin-bottom: var(--space-6);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: var(--space-4);">
                         <div>
-                            <span style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 600;">PATIENT / SEEKER CONTACT</span>
-                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--color-secondary); margin-top: 0.25rem;">
-                                <span th:text="${request.seeker.fullName}">John Doe</span>
+                            <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+                                <span class="blood-badge" th:text="${request.bloodGroup.label}">A+</span>
+                                <span th:class="'badge badge-status-' + ${#strings.toLowerCase(request.status.name())}" th:text="${request.status.label}">OPEN</span>
+                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(request.urgency.name())}">
+                                    <svg th:if="${request.urgency.name() == 'CRITICAL' or request.urgency.name() == 'HIGH'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                                    <svg th:if="${request.urgency.name() == 'MEDIUM'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg>
+                                    <svg th:if="${request.urgency.name() == 'LOW'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+                                    <span th:text="${request.urgency.label}">HIGH</span>
+                                </span>
                             </div>
-                            <div style="font-size: 1.2rem; font-weight: 800; color: var(--color-primary); margin-top: 0.25rem;">
-                                📞 <span th:text="${request.seeker.phone}">+91 98765 43210</span>
+                            <h1 style="font-size: var(--font-size-h2); margin: 0 0 var(--space-1) 0;">Blood Request #<span th:text="${request.id}">1</span></h1>
+                            <p style="color: var(--color-text-muted); font-size: var(--font-size-small); margin: 0;">
+                                Posted on <strong th:text="${#temporals.format(request.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-10</strong>
+                            </p>
+                        </div>
+                    </div>
+
+                    <hr style="border: none; border-top: 1px solid var(--color-border-subtle); margin: var(--space-6) 0;">
+
+                    <!-- Core Clinical Parameters -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-6); margin-bottom: var(--space-6);">
+                        <div>
+                            <span style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-muted); text-transform: uppercase;">Required Units</span>
+                            <div style="font-size: 1.35rem; font-weight: var(--font-weight-bold); color: var(--color-primary); margin-top: var(--space-1);">
+                                <span th:text="${request.unitsNeeded}">2</span> unit(s) of <span th:text="${request.bloodGroup.label}">A+</span>
                             </div>
                         </div>
 
-                        <div th:if="${donorMatch != null and donorMatch.contactShared}">
-                            <span style="font-size: 0.85rem; color: var(--color-text-muted); font-weight: 600;">DONOR CONTACT</span>
-                            <div style="font-size: 1.1rem; font-weight: 700; color: var(--color-secondary); margin-top: 0.25rem;">
-                                <span th:text="${donorMatch.donor.fullName}">Jane Donor</span>
+                        <div>
+                            <span style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-muted); text-transform: uppercase;">Urgency Priority</span>
+                            <div style="margin-top: var(--space-1);">
+                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(request.urgency.name())}">
+                                    <svg th:if="${request.urgency.name() == 'CRITICAL' or request.urgency.name() == 'HIGH'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                                    <svg th:if="${request.urgency.name() == 'MEDIUM'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg>
+                                    <svg th:if="${request.urgency.name() == 'LOW'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+                                    <span th:text="${request.urgency.label}">HIGH</span>
+                                </span>
                             </div>
-                            <div style="font-size: 1.2rem; font-weight: 800; color: #15803d; margin-top: 0.25rem;">
-                                📞 <span th:text="${donorMatch.donor.phone}">+91 91234 56780</span>
+                        </div>
+
+                        <div>
+                            <span style="font-size: var(--font-size-caption); font-weight: var(--font-weight-semibold); color: var(--color-text-muted); text-transform: uppercase;">Required By Date</span>
+                            <div style="font-size: 1.15rem; font-weight: var(--font-weight-semibold); margin-top: var(--space-1); display: flex; align-items: center; gap: var(--space-2);">
+                                <svg class="icon icon-xs" style="color: var(--color-text-muted);" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+                                <span th:text="${request.requiredBy}">2026-10-15</span>
+                                <span class="relative-hint" th:attr="data-relative-date=${request.requiredBy}"></span>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div th:unless="${contactRevealed}">
-                    <div class="alert alert-info" style="margin-bottom: 1rem;">
-                        🔒 Phone numbers and private contacts are withheld to protect user privacy until a mutual match is confirmed.
+                    <!-- Hospital Location Context -->
+                    <div style="background-color: var(--color-surface-subtle); border: 1px solid var(--color-border); padding: var(--space-6); border-radius: var(--radius-md); margin-bottom: var(--space-6);">
+                        <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3);">
+                            <svg class="icon icon-sm" style="color: var(--color-primary);" aria-hidden="true"><use href="#icon-hospital"></use></svg>
+                            <h2 style="font-size: var(--font-size-h4); margin: 0;">Hospital &amp; Clinical Facility</h2>
+                        </div>
+                        <p style="margin-bottom: var(--space-2);">
+                            <strong>Hospital Name:</strong> <span th:text="${request.hospitalName}">Apollo Clinic</span>
+                        </p>
+                        <p style="margin-bottom: var(--space-2);">
+                            <strong>Location:</strong> <span th:text="${request.hospitalAddress}">123 Health Ave</span>,
+                            <span th:text="${request.seeker.city + ', ' + request.seeker.state}">City, State</span>
+                        </p>
+                        <p th:if="${request.reason}" style="margin-top: var(--space-2); color: var(--color-text-secondary);">
+                            <strong>Clinical Context / Reason:</strong> <span th:text="${request.reason}">Surgery notes...</span>
+                        </p>
                     </div>
-                    <div sec:authorize="hasRole('DONOR')" th:if="${request.status.name() == 'OPEN'}">
-                        <!-- Canonical Accept Match Form with CSRF token -->
-                        <form th:action="@{/matches/{id}/accept(id=${request.id})}" method="post">
-                            <button type="submit" class="btn btn-success btn-lg">
-                                I Can Help (Accept Match & Reveal Phone Numbers)
-                            </button>
-                        </form>
+
+                    <!-- Contact Disclosure Section (Revealed ONLY upon acceptance) -->
+                    <div th:if="${contactRevealed}" class="contact-card-shared">
+                        <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-4);">
+                            <div style="width: 2.25rem; height: 2.25rem; border-radius: var(--radius-pill); background-color: var(--color-secondary); color: var(--color-text-inverse); display: flex; align-items: center; justify-content: center;">
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-phone"></use></svg>
+                            </div>
+                            <div>
+                                <h2 style="font-size: var(--font-size-h4); color: var(--color-secondary); margin: 0;">Direct Contact Information</h2>
+                                <p style="font-size: var(--font-size-caption); color: var(--color-text-muted); margin: 0;">
+                                    Mutual match accepted! Direct contact numbers are disclosed below for immediate coordination.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-4);">
+                            <div style="background-color: var(--color-surface); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                                <span style="font-size: var(--font-size-caption); color: var(--color-text-muted); font-weight: var(--font-weight-semibold); text-transform: uppercase;">PATIENT / SEEKER CONTACT</span>
+                                <div style="font-size: 1.1rem; font-weight: var(--font-weight-bold); margin-top: var(--space-1);">
+                                    <span th:text="${request.seeker.fullName}">John Doe</span>
+                                </div>
+                                <div style="font-size: 1.25rem; font-weight: var(--font-weight-extrabold); color: var(--color-primary); margin-top: var(--space-2); display: flex; align-items: center; gap: var(--space-2);">
+                                    <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-phone"></use></svg>
+                                    <span th:text="${request.seeker.phone}">+91 98765 43210</span>
+                                </div>
+                            </div>
+
+                            <div th:if="${donorMatch != null and donorMatch.contactShared}" style="background-color: var(--color-surface); padding: var(--space-4); border-radius: var(--radius-md); border: 1px solid var(--color-secondary-border);">
+                                <span style="font-size: var(--font-size-caption); color: var(--color-secondary); font-weight: var(--font-weight-semibold); text-transform: uppercase;">DONOR CONTACT</span>
+                                <div style="font-size: 1.1rem; font-weight: var(--font-weight-bold); margin-top: var(--space-1);">
+                                    <span th:text="${donorMatch.donor.fullName}">Jane Donor</span>
+                                </div>
+                                <div style="font-size: 1.25rem; font-weight: var(--font-weight-extrabold); color: var(--color-secondary); margin-top: var(--space-2); display: flex; align-items: center; gap: var(--space-2);">
+                                    <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-phone"></use></svg>
+                                    <span th:text="${donorMatch.donor.phone}">+91 91234 56780</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div th:unless="${contactRevealed}" class="contact-card-locked">
+                        <div style="display: flex; align-items: flex-start; gap: var(--space-3);">
+                            <div style="width: 2.5rem; height: 2.5rem; border-radius: var(--radius-pill); background-color: var(--color-border); color: var(--color-text-secondary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-lock"></use></svg>
+                            </div>
+                            <div>
+                                <h2 style="font-size: var(--font-size-h4); margin: 0 0 var(--space-1) 0;">Direct Contact Information</h2>
+                                <p style="font-size: var(--font-size-small); color: var(--color-text-muted); margin: 0 0 var(--space-3) 0;">
+                                    Phone numbers and private contact details are withheld to protect user privacy until a mutual match is confirmed.
+                                </p>
+                                <div sec:authorize="hasRole('DONOR')" th:if="${request.status.name() == 'OPEN'}">
+                                    <form th:action="@{/matches/{id}/accept(id=${request.id})}" method="post">
+                                        <button type="submit" class="btn btn-teal btn-lg">
+                                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-check"></use></svg>
+                                            <span>I Can Help (Accept Match &amp; Reveal Phone Numbers)</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Seeker's View of All Matches for this Request -->
+                <section class="card" th:if="${isOwner}">
+                    <div class="card-header">
+                        <div>
+                            <h2 style="font-size: var(--font-size-h3); margin: 0;">Matching Donors for this Request (<span th:text="${#lists.size(matches)}">0</span>)</h2>
+                            <p style="font-size: var(--font-size-small); color: var(--color-text-muted); margin: 0;">
+                                Donors notified by the matching engine who can potentially fulfill this transfusion requirement.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div th:if="${#lists.isEmpty(matches)}" class="empty-state" style="padding: var(--space-8) var(--space-4);">
+                        <div class="empty-state-icon">
+                            <svg class="icon icon-xl" aria-hidden="true"><use href="#icon-users"></use></svg>
+                        </div>
+                        <h3>No Donors Matched Yet</h3>
+                        <p>Our background system is searching for eligible donors in your city and state.</p>
+                    </div>
+
+                    <!-- Matches Table -->
+                    <div th:if="${not #lists.isEmpty(matches)}" class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Donor Name</th>
+                                    <th scope="col">Donor City</th>
+                                    <th scope="col">Match Status</th>
+                                    <th scope="col">Donor Phone</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="m : ${matches}">
+                                    <td>
+                                        <strong th:text="${m.donor.fullName}">Donor Name</strong>
+                                    </td>
+                                    <td>
+                                        <span style="display: inline-flex; align-items: center; gap: var(--space-1);">
+                                            <svg class="icon icon-xs" style="color: var(--color-text-muted);" aria-hidden="true"><use href="#icon-map-pin"></use></svg>
+                                            <span th:text="${m.donor.city}">City</span>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span th:class="'badge badge-status-' + ${#strings.toLowerCase(m.status.name())}" th:text="${m.status.label}">PENDING</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${m.contactShared}" style="color: var(--color-secondary); font-weight: var(--font-weight-bold); display: inline-flex; align-items: center; gap: var(--space-1);">
+                                            <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-phone"></use></svg>
+                                            <span th:text="${m.donor.phone}">9876543210</span>
+                                        </span>
+                                        <span th:unless="${m.contactShared}" style="color: var(--color-text-muted); font-size: var(--font-size-caption); display: inline-flex; align-items: center; gap: var(--space-1);">
+                                            <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg>
+                                            <span>Awaiting donor acceptance</span>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Status Timeline & Action Panel -->
+            <aside class="request-detail-sidebar">
+                <div class="card" style="position: sticky; top: calc(72px + var(--space-4));">
+                    <h2 style="font-size: var(--font-size-h4); margin: 0 0 var(--space-2) 0;">Request Lifecycle</h2>
+                    <p style="font-size: var(--font-size-caption); color: var(--color-text-muted); margin: 0 0 var(--space-4) 0;">
+                        Current tracking state and verified donor response progression.
+                    </p>
+
+                    <!-- Status Timeline -->
+                    <div class="status-timeline">
+                        <!-- Step 1: Created -->
+                        <div class="timeline-step is-done">
+                            <span class="timeline-dot">
+                                <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+                            </span>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Request Created</div>
+                                <div class="timeline-desc" th:text="${#temporals.format(request.createdAt, 'MMM dd, yyyy HH:mm')}">Oct 10, 2026</div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Open / Matching -->
+                        <div class="timeline-step"
+                             th:classappend="${request.status.name() == 'OPEN'} ? ' is-active' : ' is-done'">
+                            <span class="timeline-dot">
+                                <svg th:if="${request.status.name() == 'OPEN'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-pulse"></use></svg>
+                                <svg th:unless="${request.status.name() == 'OPEN'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+                            </span>
+                            <div class="timeline-content">
+                                <div class="timeline-title">Donor Matching</div>
+                                <div class="timeline-desc">
+                                    <span th:if="${request.status.name() == 'OPEN'}">Active in regional pool</span>
+                                    <span th:unless="${request.status.name() == 'OPEN'}">Matching stage closed</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Lifecycle Outcome -->
+                        <div class="timeline-step"
+                             th:classappend="${request.status.name() == 'FULFILLED'} ? ' is-done' : (${request.status.name() == 'CANCELLED' or request.status.name() == 'EXPIRED'} ? ' is-cancelled' : '')">
+                            <span class="timeline-dot">
+                                <svg th:if="${request.status.name() == 'FULFILLED'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+                                <svg th:if="${request.status.name() == 'CANCELLED' or request.status.name() == 'EXPIRED'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-close"></use></svg>
+                                <svg th:if="${request.status.name() == 'OPEN'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg>
+                            </span>
+                            <div class="timeline-content">
+                                <div class="timeline-title">
+                                    <span th:if="${request.status.name() == 'OPEN'}">Final Outcome</span>
+                                    <span th:if="${request.status.name() == 'FULFILLED'}">Fulfilled</span>
+                                    <span th:if="${request.status.name() == 'CANCELLED'}">Cancelled</span>
+                                    <span th:if="${request.status.name() == 'EXPIRED'}">Expired</span>
+                                </div>
+                                <div class="timeline-desc">
+                                    <span th:if="${request.status.name() == 'OPEN'}">Pending transfusion</span>
+                                    <span th:if="${request.status.name() == 'FULFILLED'}">Transfusion confirmed</span>
+                                    <span th:if="${request.status.name() == 'CANCELLED'}">Closed by seeker</span>
+                                    <span th:if="${request.status.name() == 'EXPIRED'}">Required-by passed</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-stack" style="margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-border-subtle);">
+                        <!-- Seeker Owner Actions -->
+                        <th:block th:if="${isOwner and request.status.name() == 'OPEN'}">
+                            <a th:href="@{/requests/{id}/edit(id=${request.id})}" class="btn btn-secondary btn-block">
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+                                <span>Edit Request</span>
+                            </a>
+
+                            <form th:action="@{/requests/{id}/fulfill(id=${request.id})}"
+                                  method="post"
+                                  data-confirm="Are you sure you want to mark this blood request as fulfilled? This indicates you have received the required blood units."
+                                  data-confirm-title="Mark Request as Fulfilled"
+                                  data-confirm-label="Yes, Mark Fulfilled">
+                                <button type="submit" class="btn btn-teal btn-block">
+                                    <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-check"></use></svg>
+                                    <span>Mark as Fulfilled</span>
+                                </button>
+                            </form>
+
+                            <form th:action="@{/requests/{id}/cancel(id=${request.id})}"
+                                  method="post"
+                                  data-confirm="Are you sure you want to cancel this blood request? Any pending matching notifications will be closed."
+                                  data-confirm-title="Cancel Blood Request"
+                                  data-confirm-label="Yes, Cancel Request">
+                                <button type="submit" class="btn btn-danger btn-block">
+                                    <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-close"></use></svg>
+                                    <span>Cancel Request</span>
+                                </button>
+                            </form>
+                        </th:block>
+
+                        <!-- Donor Response Actions -->
+                        <th:block sec:authorize="hasRole('DONOR')" th:if="${request.status.name() == 'OPEN' and not contactRevealed}">
+                            <form th:action="@{/matches/{id}/accept(id=${request.id})}" method="post">
+                                <button type="submit" class="btn btn-teal btn-block btn-lg">
+                                    <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-check"></use></svg>
+                                    <span>Accept Match</span>
+                                </button>
+                            </form>
+
+                            <form th:action="@{/matches/{id}/decline(id=${request.id})}"
+                                  method="post"
+                                  data-confirm="Are you sure you want to decline this match request?"
+                                  data-confirm-title="Decline Match"
+                                  data-confirm-label="Decline">
+                                <button type="submit" class="btn btn-ghost btn-block">
+                                    <span>Decline Match</span>
+                                </button>
+                            </form>
+                        </th:block>
+
+                        <!-- Back Navigation Link -->
+                        <a th:href="@{/dashboard}" class="btn btn-ghost btn-block" style="margin-top: var(--space-2);">
+                            <span>&larr; Back to Dashboard</span>
+                        </a>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Seeker's View of All Matches for this Request -->
-        <section class="card" th:if="${isOwner}">
-            <h2 style="font-size: 1.3rem; color: var(--color-secondary); margin-bottom: 1rem;">
-                Matching Donors for this Request (<span th:text="${#lists.size(matches)}">0</span>)
-            </h2>
-
-            <div th:if="${#lists.isEmpty(matches)}" class="empty-state">
-                <div class="empty-state-icon">👥</div>
-                <h3>No Donors Matched Yet</h3>
-                <p>Our background system is looking for eligible donors nearby.</p>
-            </div>
-
-            <div th:if="${not #lists.isEmpty(matches)}" class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Donor Name</th>
-                            <th>Donor City</th>
-                            <th>Match Status</th>
-                            <th>Donor Phone</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="m : ${matches}">
-                            <td th:text="${m.donor.fullName}">Donor Name</td>
-                            <td th:text="${m.donor.city}">City</td>
-                            <td>
-                                <span th:class="'badge badge-' + ${#strings.toLowerCase(m.status.name())}" th:text="${m.status.label}">PENDING</span>
-                            </td>
-                            <td>
-                                <span th:if="${m.contactShared}" style="color: #15803d; font-weight: 700;" th:text="${m.donor.phone}">
-                                    9876543210
-                                </span>
-                                <span th:unless="${m.contactShared}" style="color: var(--color-text-muted); font-size: 0.85rem;">
-                                    🔒 Awaiting donor acceptance
-                                </span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <div style="margin-top: 1.5rem;">
-            <a th:href="@{/dashboard}" class="btn btn-secondary">&larr; Back to Dashboard</a>
+            </aside>
         </div>
     </main>
 

@@ -5,39 +5,87 @@
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
 
-    <main>
-        <div class="form-container">
-            <div class="card">
-                <div style="text-align: center; margin-bottom: 1.5rem;">
-                    <span class="brand-icon" style="margin: 0 auto 0.5rem auto;">♥</span>
-                    <h2 style="color: var(--color-secondary);">Welcome Back</h2>
-                    <p style="color: var(--color-text-muted); font-size: 0.95rem;">Sign in to your LifeLink account</p>
+    <main class="main-content" id="mainContent" style="display: flex; align-items: center; justify-content: center; min-height: calc(80vh - 120px);">
+        <div class="form-card" style="width: 100%; max-width: 440px;">
+            <div class="card" style="padding: var(--space-8) var(--space-6); box-shadow: var(--shadow-md);">
+                <!-- Header with Droplet Logo -->
+                <div style="text-align: center; margin-bottom: var(--space-6);">
+                    <div class="brand-icon" style="margin: 0 auto var(--space-3) auto; width: 3rem; height: 3rem; border-radius: var(--radius-pill);">
+                        <svg class="icon icon-lg icon-fill" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                    </div>
+                    <h1 style="font-size: var(--font-size-h2); margin-bottom: var(--space-1);">Welcome Back</h1>
+                    <p style="color: var(--color-text-muted); font-size: var(--font-size-small); margin: 0;">
+                        Sign in to access your LifeLink dashboard and active matches
+                    </p>
                 </div>
 
+                <!-- Existing & Flash Status Alerts -->
                 <div th:replace="~{fragments/layout :: alerts}"></div>
 
-                <!-- Form Login with automatic CSRF token -->
-                <form th:action="@{/login}" method="post">
-                    <div class="form-group">
+                <!-- Explicit Rate-Limiting Alert Support -->
+                <div th:if="${param.rateLimit}" class="alert alert-error" role="alert">
+                    <div class="alert-content">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                        <span>Too many login attempts. Please wait 60 seconds before trying again.</span>
+                    </div>
+                </div>
+
+                <!-- Sign In Form with automatic CSRF token via th:action -->
+                <form th:action="@{/login}" method="post" data-prevent-double-submit>
+                    <div class="form-field">
                         <label class="form-label" for="username">Username or Email Address</label>
-                        <input type="text" id="username" name="username" class="form-control"
-                               placeholder="e.g. john_doe or john@example.com" required autofocus>
+                        <input type="text"
+                               id="username"
+                               name="username"
+                               class="form-control"
+                               placeholder="e.g. john_doe or john@example.com"
+                               autocomplete="username"
+                               required
+                               autofocus>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="password">Password</label>
-                        <input type="password" id="password" name="password" class="form-control"
-                               placeholder="••••••••" required>
+                    <div class="form-field">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2);">
+                            <label class="form-label" for="password" style="margin: 0;">Password</label>
+                        </div>
+                        <div class="password-input-wrapper">
+                            <input type="password"
+                                   id="password"
+                                   name="password"
+                                   class="form-control"
+                                   placeholder="Enter your password"
+                                   autocomplete="current-password"
+                                   required>
+                            <button type="button"
+                                    class="password-toggle-btn"
+                                    data-password-toggle
+                                    data-password-target="password"
+                                    aria-label="Show password"
+                                    aria-pressed="false"
+                                    title="Toggle password visibility">
+                                <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-eye"></use></svg>
+                            </button>
+                        </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                    <button type="submit"
+                            class="btn btn-primary btn-block btn-lg"
+                            style="margin-top: var(--space-4);"
+                            data-loading-text="Signing In...">
                         Sign In
                     </button>
                 </form>
 
-                <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--color-text-muted);">
-                    Don't have an account yet?
-                    <a th:href="@{/register}" style="font-weight: 600;">Create one now</a>
+                <!-- Security & Onboarding Subtext -->
+                <div style="margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-border-subtle); text-align: center;">
+                    <p style="font-size: var(--font-size-small); color: var(--color-text-muted); margin-bottom: var(--space-2);">
+                        Don't have an account yet?
+                        <a th:href="@{/register}" style="font-weight: var(--font-weight-semibold); color: var(--color-primary);">Register as a Donor</a>
+                    </p>
+                    <div style="display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--font-size-caption); color: var(--color-text-muted); margin-top: var(--space-2);">
+                        <svg class="icon icon-xs" style="color: var(--color-secondary);" aria-hidden="true"><use href="#icon-shield-check"></use></svg>
+                        <span>Encrypted with BCrypt &amp; protected by per-IP rate limiting</span>
+                    </div>
                 </div>
             </div>
         </div>

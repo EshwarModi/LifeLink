@@ -1,100 +1,158 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head th:replace="~{fragments/layout :: head('Open Blood Requests — LifeLink')}"></head>
+<head th:replace="~{fragments/layout :: head('Open Blood Requests Directory — LifeLink')}"></head>
 <body>
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
 
-    <main>
+    <main id="mainContent" class="container py-8">
         <div th:replace="~{fragments/layout :: alerts}"></div>
 
-        <div class="card" style="margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                <div>
-                    <h1 style="font-size: 1.8rem; color: var(--color-secondary);">Open Blood Requests Directory</h1>
-                    <p style="color: var(--color-text-muted);">
-                        Browse current emergency and surgical requirements across facilities.
-                    </p>
+        <!-- Directory Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-6);">
+            <div>
+                <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1);">
+                    <svg class="icon icon-md" style="color: var(--color-primary);" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                    <h1 style="font-size: var(--font-size-h2); margin: 0;">Open Blood Requests Directory</h1>
                 </div>
-                <div sec:authorize="hasRole('SEEKER')">
-                    <a th:href="@{/requests/new}" class="btn btn-primary">+ Post a Blood Request</a>
-                </div>
+                <p style="color: var(--color-text-muted); font-size: var(--font-size-small); margin: 0;">
+                    Real-time verified patient transfusion requirements across regional hospitals and clinical centers.
+                </p>
             </div>
+            <div sec:authorize="hasRole('SEEKER')">
+                <a th:href="@{/requests/new}" class="btn btn-primary">
+                    <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-plus"></use></svg>
+                    <span>Post a Blood Request</span>
+                </a>
+            </div>
+        </div>
 
-            <!-- Filter Controls -->
-            <form th:action="@{/requests}" method="get" style="margin-top: 1.25rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                <label for="bgFilter" style="font-weight: 600; font-size: 0.9rem;">Filter by Blood Group:</label>
-                <select id="bgFilter" name="bloodGroup" class="form-control" style="width: auto; min-width: 180px;" onchange="this.form.submit()">
-                    <option value="">All Blood Groups</option>
-                    <option th:each="bg : ${bloodGroups}" th:value="${bg}" th:text="${bg.label}"
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <form th:action="@{/requests}" method="get" style="display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; width: 100%;">
+                <label for="bgFilter" class="filter-bar-label">
+                    <svg class="icon icon-sm" style="color: var(--color-primary);" aria-hidden="true"><use href="#icon-filter"></use></svg>
+                    <span>Filter by Blood Group:</span>
+                </label>
+                <select id="bgFilter"
+                        name="bloodGroup"
+                        class="form-control"
+                        style="width: auto; min-width: 200px;"
+                        onchange="this.form.submit()">
+                    <option value="">All Blood Groups (Any)</option>
+                    <option th:each="bg : ${bloodGroups}"
+                            th:value="${bg}"
+                            th:text="${bg.label + ' (' + bg.name() + ')'}"
                             th:selected="${bg == selectedBloodGroup}"></option>
                 </select>
-                <a th:if="${selectedBloodGroup != null}" th:href="@{/requests}" class="btn btn-secondary btn-sm">Clear Filter</a>
+                <a th:if="${selectedBloodGroup != null}" th:href="@{/requests}" class="btn btn-secondary btn-sm">
+                    <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-close"></use></svg>
+                    <span>Clear Filter</span>
+                </a>
+
+                <div style="margin-left: auto; font-size: var(--font-size-small); color: var(--color-text-muted);">
+                    Showing <strong th:text="${requestsPage.numberOfElements}">0</strong> of <strong th:text="${requestsPage.totalElements}">0</strong> open requests
+                </div>
             </form>
         </div>
 
-        <section class="card">
-            <!-- Empty State -->
-            <div th:if="${requestsPage.totalElements == 0}" class="empty-state">
-                <div class="empty-state-icon">🔍</div>
-                <h3>No Open Requests Found</h3>
-                <p>There are no open requests matching the chosen criteria.</p>
-                <a th:href="@{/requests}" class="btn btn-secondary btn-sm">View All Requests</a>
+        <!-- Empty State -->
+        <div th:if="${requestsPage.totalElements == 0}" class="card empty-state" style="padding: var(--space-12) var(--space-6);">
+            <div class="empty-state-icon">
+                <svg class="icon icon-xl" aria-hidden="true"><use href="#icon-drop"></use></svg>
             </div>
-
-            <!-- Results Table -->
-            <div th:if="${requestsPage.totalElements > 0}" class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Blood Group</th>
-                            <th>Units Needed</th>
-                            <th>Urgency</th>
-                            <th>Hospital & Address</th>
-                            <th>City & State</th>
-                            <th>Required By</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="r : ${requestsPage.content}">
-                            <td>
-                                <span class="badge badge-blood" th:text="${r.bloodGroup.label}">A+</span>
-                            </td>
-                            <td><strong th:text="${r.unitsNeeded}">2</strong> unit(s)</td>
-                            <td>
-                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(r.urgency.name())}"
-                                      th:text="${r.urgency.label}">HIGH</span>
-                            </td>
-                            <td>
-                                <strong th:text="${r.hospitalName}">Apollo Clinic</strong><br>
-                                <small style="color: var(--color-text-muted);" th:text="${r.hospitalAddress}">Address</small>
-                            </td>
-                            <td th:text="${r.seeker.city + ', ' + r.seeker.state}">City, State</td>
-                            <td th:text="${r.requiredBy}">2026-10-15</td>
-                            <td>
-                                <a th:href="@{/requests/{id}(id=${r.id})}" class="btn btn-primary btn-sm">View Details & Respond</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <h2 style="font-size: var(--font-size-h3); margin-bottom: var(--space-2);">No Open Requests Found</h2>
+            <p style="color: var(--color-text-muted); max-width: 480px; margin: 0 auto var(--space-6);">
+                There are currently no active blood transfusion postings matching the selected criteria.
+            </p>
+            <div style="display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap;">
+                <a th:if="${selectedBloodGroup != null}" th:href="@{/requests}" class="btn btn-secondary btn-sm">View All Blood Groups</a>
+                <a sec:authorize="hasRole('SEEKER')" th:href="@{/requests/new}" class="btn btn-primary btn-sm">Post a New Request</a>
             </div>
+        </div>
 
-            <!-- Pagination Controls (Design Decision #13) -->
-            <div th:if="${requestsPage.totalPages > 1}" class="pagination">
-                <a th:href="@{/requests(page=${requestsPage.number - 1}, bloodGroup=${selectedBloodGroup})}"
-                   th:class="'pagination-item ' + ${requestsPage.first ? 'disabled' : ''}">&laquo; Prev</a>
+        <!-- Requests Cards Grid -->
+        <div th:if="${requestsPage.totalElements > 0}" class="request-grid">
+            <article th:each="r : ${requestsPage.content}" class="request-card">
+                <!-- Left Urgency Color Bar -->
+                <div th:class="'request-card-strip strip-' + ${#strings.toLowerCase(r.urgency.name())}" aria-hidden="true"></div>
 
-                <span th:each="i : ${#numbers.sequence(0, requestsPage.totalPages - 1)}">
+                <!-- Card Header -->
+                <div class="request-card-header">
+                    <div class="request-card-badges">
+                        <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(r.urgency.name())}">
+                            <svg th:if="${r.urgency.name() == 'CRITICAL' or r.urgency.name() == 'HIGH'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                            <svg th:if="${r.urgency.name() == 'MEDIUM'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg>
+                            <svg th:if="${r.urgency.name() == 'LOW'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+                            <span th:text="${r.urgency.label}">HIGH</span>
+                        </span>
+                        <span th:class="'badge badge-status-' + ${#strings.toLowerCase(r.status.name())}" th:text="${r.status.label}">OPEN</span>
+                    </div>
+
+                    <div class="request-card-date">
+                        <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+                        <span th:text="${r.requiredBy}">2026-10-15</span>
+                        <span class="relative-hint" th:attr="data-relative-date=${r.requiredBy}"></span>
+                    </div>
+                </div>
+
+                <!-- Card Body -->
+                <div class="request-card-body">
+                    <!-- Blood Avatar -->
+                    <div class="blood-drop-avatar" th:title="${r.bloodGroup.label}">
+                        <svg class="icon icon-xs" style="margin-bottom: 2px;" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                        <span th:text="${r.bloodGroup.label}">A+</span>
+                    </div>
+
+                    <div class="request-card-details">
+                        <div class="request-card-units">
+                            <span th:text="${r.unitsNeeded}">2</span> unit(s) of <span th:text="${r.bloodGroup.label}">A+</span> required
+                        </div>
+                        <div class="request-card-hospital" th:text="${r.hospitalName}">Apollo Clinic</div>
+                        <div class="request-card-location">
+                            <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-map-pin"></use></svg>
+                            <span th:text="${r.seeker.city + ', ' + r.seeker.state}">City, State</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Footer -->
+                <div class="request-card-footer">
+                    <span style="font-size: var(--font-size-caption); color: var(--color-text-muted);">
+                        Posted on <strong th:text="${#temporals.format(r.createdAt, 'yyyy-MM-dd')}">2026-10-10</strong>
+                    </span>
+                    <a th:href="@{/requests/{id}(id=${r.id})}" class="btn btn-primary btn-sm">
+                        <span>View Request</span>
+                        <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
+                    </a>
+                </div>
+            </article>
+        </div>
+
+        <!-- Pagination Controls -->
+        <nav th:if="${requestsPage.totalPages > 1}" aria-label="Pagination Navigation" style="margin-top: var(--space-8);">
+            <ul class="pagination">
+                <li class="page-item" th:classappend="${requestsPage.first} ? ' disabled' : ''">
+                    <a th:href="@{/requests(page=${requestsPage.number - 1}, bloodGroup=${selectedBloodGroup})}"
+                       class="page-link"
+                       th:attr="aria-disabled=${requestsPage.first} ? 'true' : 'false'">&laquo; Prev</a>
+                </li>
+
+                <li class="page-item"
+                    th:each="i : ${#numbers.sequence(0, requestsPage.totalPages - 1)}"
+                    th:classappend="${i == requestsPage.number} ? ' active' : ''">
                     <a th:href="@{/requests(page=${i}, bloodGroup=${selectedBloodGroup})}"
-                       th:class="'pagination-item ' + ${i == requestsPage.number ? 'active' : ''}"
+                       class="page-link"
                        th:text="${i + 1}">1</a>
-                </span>
+                </li>
 
-                <a th:href="@{/requests(page=${requestsPage.number + 1}, bloodGroup=${selectedBloodGroup})}"
-                   th:class="'pagination-item ' + ${requestsPage.last ? 'disabled' : ''}">Next &raquo;</a>
-            </div>
-        </section>
+                <li class="page-item" th:classappend="${requestsPage.last} ? ' disabled' : ''">
+                    <a th:href="@{/requests(page=${requestsPage.number + 1}, bloodGroup=${selectedBloodGroup})}"
+                       class="page-link"
+                       th:attr="aria-disabled=${requestsPage.last} ? 'true' : 'false'">Next &raquo;</a>
+                </li>
+            </ul>
+        </nav>
     </main>
 
     <footer th:replace="~{fragments/layout :: footer}"></footer>

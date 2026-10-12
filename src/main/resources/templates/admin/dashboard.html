@@ -5,144 +5,196 @@
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
 
-    <main>
+    <main class="main-content" id="mainContent">
         <div th:replace="~{fragments/layout :: alerts}"></div>
 
         <!-- Admin Overview Banner -->
-        <div class="card" style="margin-bottom: 2rem;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div class="dashboard-header-card">
+            <div class="dashboard-header-flex">
                 <div>
-                    <span class="badge badge-blood" style="margin-bottom: 0.5rem;">Read-Only System View</span>
-                    <h1 style="font-size: 1.8rem; color: var(--color-secondary);">Administrator Analytics Dashboard</h1>
-                    <p style="color: var(--color-text-muted);">
-                        Logged in as: <strong th:text="${user.fullName}">Administrator</strong> (<span th:text="${user.username}">admin</span>)
-                    </p>
+                    <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+                        <span class="badge badge-teal">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield-check"></use></svg>
+                            Read-Only System View
+                        </span>
+                        <span class="badge" style="background-color: var(--color-surface-subtle); border-color: var(--color-border); color: var(--color-text-muted);">
+                            Role: Platform Administrator
+                        </span>
+                    </div>
+                    <h1>Administrator Analytics Dashboard</h1>
+                    <div class="dashboard-meta">
+                        <span>
+                            <svg class="icon icon-sm" aria-hidden="true" style="vertical-align: text-bottom;"><use href="#icon-user"></use></svg>
+                            Logged in as: <strong th:text="${user.fullName}">Administrator</strong> (<span th:text="${user.username}">admin</span>)
+                        </span>
+                    </div>
                 </div>
                 <div>
                     <form th:action="@{/logout}" method="post" style="display:inline;">
-                        <button type="submit" class="btn btn-secondary btn-sm">Sign Out</button>
+                        <button type="submit" class="btn btn-secondary btn-sm">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
+                            Sign Out
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <!-- 1. User Counts by Type -->
-        <section class="card">
-            <h2 style="font-size: 1.3rem; color: var(--color-secondary); margin-bottom: 1rem;">
-                User Accounts Breakdown (Total: <span th:text="${totalUsers}">0</span>)
-            </h2>
-            <div class="stats-grid">
+        <!-- 1. User Accounts Breakdown -->
+        <section class="card" aria-labelledby="userBreakdownHeading">
+            <div class="card-header">
+                <h2 id="userBreakdownHeading" style="font-size: var(--font-size-h3); margin: 0;">
+                    User Accounts Breakdown (Total: <span th:text="${totalUsers}">0</span>)
+                </h2>
+                <span class="text-sm text-muted">Platform account distribution</span>
+            </div>
+            <div class="stats-grid" style="margin-bottom: 0;">
                 <div class="stat-card">
                     <div class="stat-value" th:text="${donorCount}">0</div>
-                    <div class="stat-label">Registered Donors</div>
+                    <div class="stat-label">
+                        <svg class="icon icon-sm text-muted" aria-hidden="true" style="vertical-align: text-bottom;"><use href="#icon-drop"></use></svg>
+                        Registered Donors
+                    </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" th:text="${seekerCount}">0</div>
-                    <div class="stat-label">Patients / Seekers</div>
+                    <div class="stat-label">
+                        <svg class="icon icon-sm text-muted" aria-hidden="true" style="vertical-align: text-bottom;"><use href="#icon-user"></use></svg>
+                        Patients / Seekers
+                    </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" th:text="${adminCount}">0</div>
-                    <div class="stat-label">System Admins</div>
+                    <div class="stat-label">
+                        <svg class="icon icon-sm text-muted" aria-hidden="true" style="vertical-align: text-bottom;"><use href="#icon-shield-check"></use></svg>
+                        System Admins
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- 2. Request Counts by Status -->
-        <section class="card">
-            <h2 style="font-size: 1.3rem; color: var(--color-secondary); margin-bottom: 1rem;">
-                Blood Requests Breakdown (Total: <span th:text="${totalRequests}">0</span>)
-            </h2>
-            <div class="stats-grid">
+        <section class="card" aria-labelledby="requestBreakdownHeading">
+            <div class="card-header">
+                <h2 id="requestBreakdownHeading" style="font-size: var(--font-size-h3); margin: 0;">
+                    Blood Requests Breakdown (Total: <span th:text="${totalRequests}">0</span>)
+                </h2>
+                <span class="text-sm text-muted">Lifecycle status across all patient requests</span>
+            </div>
+            <div class="stats-grid" style="margin-bottom: 0;">
                 <div class="stat-card">
-                    <div class="stat-value" style="color: #0369a1;" th:text="${openRequests}">0</div>
+                    <div class="stat-value stat-value-blue" th:text="${openRequests}">0</div>
                     <div class="stat-label">Open Active</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" style="color: #15803d;" th:text="${fulfilledRequests}">0</div>
+                    <div class="stat-value stat-value-teal" th:text="${fulfilledRequests}">0</div>
                     <div class="stat-label">Fulfilled</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" style="color: #64748b;" th:text="${cancelledRequests}">0</div>
+                    <div class="stat-value stat-value-gray" th:text="${cancelledRequests}">0</div>
                     <div class="stat-label">Cancelled</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" style="color: #b91c1c;" th:text="${expiredRequests}">0</div>
+                    <div class="stat-value stat-value-crimson" th:text="${expiredRequests}">0</div>
                     <div class="stat-label">Expired (Overdue)</div>
                 </div>
             </div>
         </section>
 
         <!-- 3. Match Counts by Status -->
-        <section class="card">
-            <h2 style="font-size: 1.3rem; color: var(--color-secondary); margin-bottom: 1rem;">
-                Matches Breakdown (Total: <span th:text="${totalMatches}">0</span>)
-            </h2>
-            <div class="stats-grid">
+        <section class="card" aria-labelledby="matchBreakdownHeading">
+            <div class="card-header">
+                <h2 id="matchBreakdownHeading" style="font-size: var(--font-size-h3); margin: 0;">
+                    Matches Breakdown (Total: <span th:text="${totalMatches}">0</span>)
+                </h2>
+                <span class="text-sm text-muted">Automated algorithmic pairings and donor outcomes</span>
+            </div>
+            <div class="stats-grid" style="margin-bottom: 0;">
                 <div class="stat-card">
-                    <div class="stat-value" style="color: #b45309;" th:text="${pendingMatches}">0</div>
+                    <div class="stat-value stat-value-amber" th:text="${pendingMatches}">0</div>
                     <div class="stat-label">Pending Response</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" style="color: #15803d;" th:text="${acceptedMatches}">0</div>
+                    <div class="stat-value stat-value-teal" th:text="${acceptedMatches}">0</div>
                     <div class="stat-label">Accepted (Contact Shared)</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" style="color: #64748b;" th:text="${declinedMatches}">0</div>
+                    <div class="stat-value stat-value-gray" th:text="${declinedMatches}">0</div>
                     <div class="stat-label">Declined</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" style="color: #b91c1c;" th:text="${expiredMatches}">0</div>
+                    <div class="stat-value stat-value-crimson" th:text="${expiredMatches}">0</div>
                     <div class="stat-label">Expired</div>
                 </div>
             </div>
         </section>
 
         <!-- 4. 10 Most Recent Blood Requests -->
-        <section class="card">
-            <h2 style="font-size: 1.3rem; color: var(--color-secondary); margin-bottom: 1rem;">
-                10 Most Recent Blood Requests
-            </h2>
+        <section class="card" aria-labelledby="recentRequestsHeading">
+            <div class="card-header">
+                <h2 id="recentRequestsHeading" style="font-size: var(--font-size-h3); margin: 0;">
+                    10 Most Recent Blood Requests
+                </h2>
+                <span class="text-sm text-muted">Latest activity log</span>
+            </div>
 
             <div th:if="${recentRequests == null or #lists.isEmpty(recentRequests)}" class="empty-state">
-                <div class="empty-state-icon">📋</div>
+                <div class="empty-state-icon">
+                    <svg class="icon icon-lg" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+                </div>
                 <h3>No Requests in System</h3>
                 <p>When requests are created, the most recent 10 will be listed here.</p>
             </div>
 
             <div th:if="${recentRequests != null and not #lists.isEmpty(recentRequests)}" class="table-responsive">
-                <table class="table">
+                <table class="table" aria-label="Recent Blood Requests">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Requester</th>
-                            <th>Blood Group</th>
-                            <th>Units</th>
-                            <th>Urgency</th>
-                            <th>Hospital</th>
-                            <th>City</th>
-                            <th>Required By</th>
-                            <th>Status</th>
-                            <th>Created At</th>
+                            <th scope="col">ID</th>
+                            <th scope="col">Requester</th>
+                            <th scope="col">Blood Group</th>
+                            <th scope="col">Units</th>
+                            <th scope="col">Urgency</th>
+                            <th scope="col">Hospital</th>
+                            <th scope="col">City</th>
+                            <th scope="col">Required By</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Created At</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr th:each="r : ${recentRequests}">
                             <td><strong th:text="'#' + ${r.id}">#1</strong></td>
                             <td th:text="${r.seeker.fullName}">John Doe</td>
-                            <td><span class="badge badge-blood" th:text="${r.bloodGroup.label}">A+</span></td>
+                            <td><span class="blood-badge" th:text="${r.bloodGroup.label}">A+</span></td>
                             <td><strong th:text="${r.unitsNeeded}">1</strong> unit(s)</td>
                             <td>
-                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(r.urgency.name())}"
-                                      th:text="${r.urgency.label}">HIGH</span>
+                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(r.urgency.name())}">
+                                    <svg th:if="${r.urgency.name() == 'CRITICAL'}" class="icon icon-sm" aria-hidden="true"><use href="#icon-pulse"></use></svg>
+                                    <svg th:if="${r.urgency.name() == 'HIGH'}" class="icon icon-sm" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                                    <svg th:if="${r.urgency.name() == 'MEDIUM'}" class="icon icon-sm" aria-hidden="true"><use href="#icon-clock"></use></svg>
+                                    <svg th:if="${r.urgency.name() == 'LOW'}" class="icon icon-sm" aria-hidden="true"><use href="#icon-check"></use></svg>
+                                    <span th:text="${r.urgency.label}">HIGH</span>
+                                </span>
                             </td>
                             <td th:text="${r.hospitalName}">Hospital</td>
                             <td th:text="${r.seeker.city}">City</td>
-                            <td th:text="${r.requiredBy}">2026-10-15</td>
                             <td>
-                                <span th:class="'badge badge-' + ${#strings.toLowerCase(r.status.name())}"
+                                <span style="display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--font-size-small);">
+                                    <svg class="icon icon-sm text-muted" aria-hidden="true"><use href="#icon-calendar"></use></svg>
+                                    <span th:text="${r.requiredBy}">2026-10-15</span>
+                                </span>
+                            </td>
+                            <td>
+                                <span th:class="'badge badge-status-' + ${#strings.toLowerCase(r.status.name())}"
                                       th:text="${r.status.label}">OPEN</span>
                             </td>
-                            <td th:text="${#temporals.format(r.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-10 12:00</td>
+                            <td>
+                                <span style="font-size: var(--font-size-caption); color: var(--color-text-secondary);"
+                                      th:text="${#temporals.format(r.createdAt, 'yyyy-MM-dd HH:mm')}">
+                                    2026-10-10 12:00
+                                </span>
+                            </td>
                         </tr>
                     </tbody>
                 </table>

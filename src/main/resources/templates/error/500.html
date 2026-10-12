@@ -1,25 +1,29 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LifeLink — Server Error (500)</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; text-align: center; padding: 5rem 1rem; }
-        .container { max-width: 600px; margin: 0 auto; background: white; padding: 3rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-        h1 { font-size: 4rem; color: #dc2626; margin: 0; }
-        h2 { font-size: 1.5rem; margin: 1rem 0; }
-        p { color: #64748b; margin-bottom: 2rem; }
-        a { display: inline-block; background: #dc2626; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; }
-        a:hover { background: #b91c1c; }
-    </style>
-</head>
+<head th:replace="~{fragments/layout :: head('LifeLink — Server Error (500)')}"></head>
 <body>
-    <div class="container">
-        <h1>500</h1>
-        <h2>Internal Server Error</h2>
-        <p th:text="${message} ?: 'An unexpected server error occurred. Our team has been alerted.'">Server Error.</p>
-        <a th:href="@{/}">Return Home</a>
-    </div>
+
+    <header th:replace="~{fragments/layout :: navbar}"></header>
+
+    <main id="mainContent">
+        <div th:replace="~{fragments/layout :: alerts}"></div>
+        <div class="card" style="max-width: 580px; margin: var(--space-8) auto; text-align: center; padding: var(--space-10) var(--space-6);">
+            <div class="empty-state-icon" style="background-color: var(--color-danger-bg); color: var(--color-danger); margin-bottom: var(--space-4);">
+                <svg class="icon icon-xl" aria-hidden="true"><use href="#icon-alert"></use></svg>
+            </div>
+            <h1 style="font-size: 3.5rem; color: var(--color-danger); margin-bottom: var(--space-2);">500</h1>
+            <h2 style="margin-bottom: var(--space-3);">Internal Server Error</h2>
+            <p style="color: var(--color-text-muted); margin-bottom: var(--space-6);" th:text="${message} ?: 'An unexpected server error occurred. Our engineering team has been alerted.'">
+                An unexpected server error occurred. Our engineering team has been alerted.
+            </p>
+            <div style="display: flex; justify-content: center; gap: var(--space-3);">
+                <a th:href="@{/}" class="btn btn-primary">Return to Home</a>
+                <a th:href="@{/requests}" class="btn btn-secondary">Open Requests</a>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+
 </body>
 </html>

@@ -5,117 +5,324 @@
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
 
-    <main>
+    <main class="main-content" id="mainContent">
         <div th:replace="~{fragments/layout :: alerts}"></div>
 
-        <!-- Hero Section -->
-        <section class="hero">
-            <h1>Connecting Blood Donors & Patients in Critical Need</h1>
-            <p>LifeLink is a real-time, privacy-first blood donation matching network. When seconds matter, our three-tier location algorithm matches urgent hospital requests with nearby eligible donors.</p>
-            <div class="hero-actions">
-                <span sec:authorize="isAnonymous()">
-                    <a th:href="@{/register}" class="btn btn-primary btn-lg">Become a Donor Today</a>
-                    <a th:href="@{/requests}" class="btn btn-secondary btn-lg">Browse Open Requests</a>
-                </span>
-                <span sec:authorize="hasRole('SEEKER')">
-                    <a th:href="@{/requests/new}" class="btn btn-primary btn-lg">+ Post an Urgent Blood Request</a>
-                    <a th:href="@{/seeker/dashboard}" class="btn btn-secondary btn-lg">My Seeker Dashboard</a>
-                </span>
-                <span sec:authorize="hasRole('DONOR')">
-                    <a th:href="@{/donor/dashboard}" class="btn btn-primary btn-lg">View Matching Requests</a>
-                    <a th:href="@{/donor/profile}" class="btn btn-secondary btn-lg">Update My Availability</a>
-                </span>
+        <!-- 1. Hero Section with Inline SVG Illustration -->
+        <section class="hero-layout" aria-labelledby="heroHeading">
+            <div class="hero-content">
+                <div class="footer-trust-badge" style="margin-bottom: var(--space-4);">
+                    <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-shield-check"></use></svg>
+                    <span>Clinical Emergency Network &bull; Privacy Protected</span>
+                </div>
+                <h1 id="heroHeading">Connecting Lifesaving Donors with People in Critical Need</h1>
+                <p class="hero-value-prop">
+                    A real-time, privacy-first blood donation network matching verified hospital requests with medically eligible local donors when seconds count.
+                </p>
+                <div class="hero-actions">
+                    <!-- Anonymous CTAs -->
+                    <span sec:authorize="isAnonymous()" style="display: inline-flex; gap: var(--space-3); flex-wrap: wrap;">
+                        <a th:href="@{/register}" class="btn btn-primary btn-lg">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                            <span>Become a Donor</span>
+                        </a>
+                        <a th:href="@{/requests}" class="btn btn-secondary btn-lg">
+                            <span>Find a Donor / Requests</span>
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
+                        </a>
+                    </span>
+
+                    <!-- Authenticated Dashboard CTAs -->
+                    <span sec:authorize="isAuthenticated()" style="display: inline-flex; gap: var(--space-3); flex-wrap: wrap;">
+                        <a sec:authorize="hasRole('DONOR')" th:href="@{/donor/dashboard}" class="btn btn-primary btn-lg">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                            <span>Go to Donor Dashboard</span>
+                        </a>
+                        <a sec:authorize="hasRole('SEEKER')" th:href="@{/seeker/dashboard}" class="btn btn-primary btn-lg">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+                            <span>Go to Seeker Dashboard</span>
+                        </a>
+                        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/dashboard}" class="btn btn-primary btn-lg">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield-check"></use></svg>
+                            <span>Go to Admin Dashboard</span>
+                        </a>
+                        <a th:href="@{/requests}" class="btn btn-secondary btn-lg">
+                            <span>Browse Open Requests</span>
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
+                        </a>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Clean Inline SVG Illustration: Blood drop with ECG pulse line and heart -->
+            <div class="hero-illustration" aria-hidden="true">
+                <svg class="hero-svg" viewBox="0 0 380 340" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Soft background aura -->
+                    <circle cx="190" cy="170" r="140" fill="#FDF2F4" />
+                    <circle cx="190" cy="170" r="110" fill="#FDE8EC" />
+
+                    <!-- Stylized Blood Droplet -->
+                    <path d="M190 40 C185 40 135 120 135 190 C135 235 160 265 190 265 C220 265 245 235 245 190 C245 120 195 40 190 40 Z"
+                          fill="url(#dropletGradient)" />
+
+                    <!-- Internal Heart & Pulse Waveform Accent -->
+                    <path d="M150 195 L170 195 L178 180 L186 215 L196 170 L204 205 L210 195 L230 195"
+                          stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+
+                    <!-- Droplet Specular Highlight -->
+                    <path d="M165 125 C155 145 150 170 150 185"
+                          stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.6" />
+
+                    <!-- Small Clinical Trust Emblems floating -->
+                    <g transform="translate(70, 75)">
+                        <circle cx="24" cy="24" r="22" fill="#FFFFFF" filter="drop-shadow(0 4px 8px rgba(0,0,0,0.06))" />
+                        <circle cx="24" cy="24" r="22" stroke="#E5E7EB" stroke-width="1.5" />
+                        <path d="M24 16 v16 M16 24 h16" stroke="#0F766E" stroke-width="3" stroke-linecap="round" />
+                    </g>
+
+                    <g transform="translate(265, 205)">
+                        <circle cx="24" cy="24" r="22" fill="#FFFFFF" filter="drop-shadow(0 4px 8px rgba(0,0,0,0.06))" />
+                        <circle cx="24" cy="24" r="22" stroke="#E5E7EB" stroke-width="1.5" />
+                        <path d="M18 24 l4 4 l8 -8" stroke="#B3122B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+                    </g>
+
+                    <defs>
+                        <linearGradient id="dropletGradient" x1="190" y1="40" x2="190" y2="265" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#D9223E" />
+                            <stop offset="100%" stop-color="#980F24" />
+                        </linearGradient>
+                    </defs>
+                </svg>
             </div>
         </section>
 
-        <!-- Platform Live Stats -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value" th:text="${totalDonors}">0</div>
-                <div class="stat-label">Active Registered Donors</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" th:text="${totalRequests}">0</div>
-                <div class="stat-label">Total Blood Requests</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" th:text="${fulfilledRequests}">0</div>
-                <div class="stat-label">Requests Fulfilled</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value">100%</div>
-                <div class="stat-label">Contact Privacy Protected</div>
-            </div>
-        </div>
-
-        <!-- How It Works Section -->
-        <section class="how-it-works">
-            <h2 class="section-title">How LifeLink Works</h2>
+        <!-- 2. "How it Works" in 3 Steps -->
+        <section class="how-it-works" aria-labelledby="howItWorksHeading">
+            <h2 id="howItWorksHeading" class="section-title">How LifeLink Works</h2>
             <div class="steps-grid">
                 <div class="step-card">
                     <div class="step-number">1</div>
-                    <h3>Post an Urgent Request</h3>
-                    <p>Hospitals or patients submit blood requirements specifying blood group, units, hospital, and deadline.</p>
+                    <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+                        <svg class="icon icon-sm" style="color: var(--color-primary);" aria-hidden="true"><use href="#icon-user"></use></svg>
+                        <h3 style="margin: 0;">Register as Donor or Seeker</h3>
+                    </div>
+                    <p>
+                        Create your account in under two minutes. Donors declare blood group and availability; patients and hospitals post urgent requests.
+                    </p>
                 </div>
                 <div class="step-card">
                     <div class="step-number">2</div>
-                    <h3>Automated 3-Tier Match</h3>
-                    <p>Our algorithm instantly alerts eligible donors in the same city, expands to state, and broader if needed.</p>
+                    <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+                        <svg class="icon icon-sm" style="color: var(--color-primary);" aria-hidden="true"><use href="#icon-file-text"></use></svg>
+                        <h3 style="margin: 0;">Post or Browse a Request</h3>
+                    </div>
+                    <p>
+                        Hospitals specify required units and deadlines. Our algorithmic matching system immediately dispatches alerts to nearby eligible donors.
+                    </p>
                 </div>
                 <div class="step-card">
                     <div class="step-number">3</div>
-                    <h3>Secure Connection</h3>
-                    <p>Phone numbers are strictly revealed only when an eligible donor clicks "I Can Help" to accept.</p>
+                    <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+                        <svg class="icon icon-sm" style="color: var(--color-primary);" aria-hidden="true"><use href="#icon-phone"></use></svg>
+                        <h3 style="margin: 0;">Match, Accept and Connect</h3>
+                    </div>
+                    <p>
+                        An eligible donor clicks "I Can Help" to accept. Secure direct phone numbers are disclosed instantly for immediate hospital coordination.
+                    </p>
                 </div>
             </div>
         </section>
 
-        <!-- Urgent Open Requests Section -->
-        <section class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
-                <h2 style="font-size: 1.4rem; color: var(--color-secondary);">Urgent Open Requests</h2>
-                <a th:href="@{/requests}" class="btn btn-secondary btn-sm">View All &rarr;</a>
+        <!-- 3. Privacy & Trust Band -->
+        <section class="trust-band" aria-labelledby="trustBandHeading">
+            <div class="trust-band-header">
+                <h2 id="trustBandHeading" style="font-size: var(--font-size-h3); margin-bottom: var(--space-2);">Built with Clinical Integrity &amp; Privacy by Design</h2>
+                <p class="text-sm text-muted" style="max-width: 620px; margin: 0 auto;">LifeLink incorporates rigorous clinical protocols and strict privacy safeguards into every interaction.</p>
+            </div>
+            <div class="trust-grid">
+                <div class="trust-card">
+                    <div class="trust-icon-box">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-lock"></use></svg>
+                    </div>
+                    <h3>Contact details stay hidden until a donor accepts</h3>
+                    <p>
+                        Phone numbers and direct contacts are protected. Private numbers are revealed only after an eligible donor formally accepts a match.
+                    </p>
+                </div>
+                <div class="trust-card">
+                    <div class="trust-icon-box">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-check"></use></svg>
+                    </div>
+                    <h3>Only eligible donors are matched</h3>
+                    <p>
+                        Automated screening enforces the mandatory 90-day physiological whole-blood recovery interval and age requirements for donor safety.
+                    </p>
+                </div>
+                <div class="trust-card">
+                    <div class="trust-icon-box">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield-check"></use></svg>
+                    </div>
+                    <h3>Secure sign-in</h3>
+                    <p>
+                        BCrypt password hashing, Spring Security session control, audit trails, and end-to-end CSRF verification safeguard every operation.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Blood Group Grid (Static Content: 8 Tiles) -->
+        <section class="blood-grid-section" aria-labelledby="bloodGridHeading">
+            <div style="text-align: center; margin-bottom: var(--space-6);">
+                <h2 id="bloodGridHeading" class="section-title" style="margin-bottom: var(--space-2);">Blood Group Compatibility Directory</h2>
+                <p class="text-sm text-muted" style="max-width: 600px; margin: 0 auto;">Select any blood type to browse real-time clinical requirements and understand donation compatibility.</p>
             </div>
 
-            <div th:if="${recentRequests == null or #lists.isEmpty(recentRequests)}" class="empty-state">
-                <div class="empty-state-icon">🩸</div>
-                <h3>No Open Requests Right Now</h3>
-                <p>All current blood requests have been fulfilled or matched!</p>
-            </div>
+            <div class="blood-tiles-grid">
+                <!-- O- -->
+                <a th:href="@{/requests(bloodGroup='O_NEGATIVE')}" class="blood-tile-card" style="text-decoration: none;">
+                    <div>
+                        <div class="blood-tile-symbol">O-</div>
+                        <span class="badge badge-teal blood-tile-badge">Universal Red Cell Donor</span>
+                    </div>
+                    <div class="blood-tile-desc">
+                        Can donate to all blood types.<br>Can receive only from <strong>O-</strong>.
+                    </div>
+                    <span class="btn btn-ghost btn-sm" style="font-size: var(--font-size-caption);">Browse O- Requests &rarr;</span>
+                </a>
 
-            <div th:if="${recentRequests != null and not #lists.isEmpty(recentRequests)}" class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Blood Group</th>
-                            <th>Units Needed</th>
-                            <th>Urgency</th>
-                            <th>Hospital & City</th>
-                            <th>Required By</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr th:each="req : ${recentRequests}">
-                            <td>
-                                <span class="badge badge-blood" th:text="${req.bloodGroup.label}">A+</span>
-                            </td>
-                            <td><strong th:text="${req.unitsNeeded}">2</strong> unit(s)</td>
-                            <td>
-                                <span th:class="'badge badge-urgency-' + ${#strings.toLowerCase(req.urgency.name())}"
-                                      th:text="${req.urgency.label}">HIGH</span>
-                            </td>
-                            <td>
-                                <strong th:text="${req.hospitalName}">Hospital</strong><br>
-                                <small style="color: var(--color-text-muted);" th:text="${req.seeker.city + ', ' + req.seeker.state}">City, State</small>
-                            </td>
-                            <td th:text="${req.requiredBy}">2026-10-15</td>
-                            <td>
-                                <a th:href="@{/requests/{id}(id=${req.id})}" class="btn btn-primary btn-sm">View & Respond</a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <!-- O+ -->
+                <a th:href="@{/requests(bloodGroup='O_POSITIVE')}" class="blood-tile-card" style="text-decoration: none;">
+                    <div>
+                        <div class="blood-tile-symbol">O+</div>
+                        <span class="badge blood-tile-badge" style="background-color: var(--color-surface-subtle); color: var(--color-text);">High Demand</span>
+                    </div>
+                    <div class="blood-tile-desc">
+                        Can donate to O+, A+, B+, AB+.<br>Can receive from <strong>O+, O-</strong>.
+                    </div>
+                    <span class="btn btn-ghost btn-sm" style="font-size: var(--font-size-caption);">Browse O+ Requests &rarr;</span>
+                </a>
+
+                <!-- A+ -->
+                <a th:href="@{/requests(bloodGroup='A_POSITIVE')}" class="blood-tile-card" style="text-decoration: none;">
+                    <div>
+                        <div class="blood-tile-symbol">A+</div>
+                        <span class="badge blood-tile-badge" style="background-color: var(--color-surface-subtle); color: var(--color-text);">Common Type</span>
+                    </div>
+                    <div class="blood-tile-desc">
+                        Can donate to A+, AB+.<br>Can receive from <strong>A+, A-, O+, O-</strong>.
+                    </div>
+                    <span class="btn btn-ghost btn-sm" style="font-size: var(--font-size-caption);">Browse A+ Requests &rarr;</span>
+                </a>
+
+                <!-- A- -->
+                <a th:href="@{/requests(bloodGroup='A_NEGATIVE')}" class="blood-tile-card" style="text-decoration: none;">
+                    <div>
+                        <div class="blood-tile-symbol">A-</div>
+                        <span class="badge blood-tile-badge" style="background-color: var(--color-surface-subtle); color: var(--color-text);">Rare Type</span>
+                    </div>
+                    <div class="blood-tile-desc">
+                        Can donate to A+, A-, AB+, AB-.<br>Can receive from <strong>A-, O-</strong>.
+                    </div>
+                    <span class="btn btn-ghost btn-sm" style="font-size: var(--font-size-caption);">Browse A- Requests &rarr;</span>
+                </a>
+
+                <!-- B+ -->
+                <a th:href="@{/requests(bloodGroup='B_POSITIVE')}" class="blood-tile-card" style="text-decoration: none;">
+                    <div>
+                        <div class="blood-tile-symbol">B+</div>
+                        <span class="badge blood-tile-badge" style="background-color: var(--color-surface-subtle); color: var(--color-text);">Critical Need</span>
+                    </div>
+                    <div class="blood-tile-desc">
+                        Can donate to B+, AB+.<br>Can receive from <strong>B+, B-, O+, O-</strong>.
+                    </div>
+                    <span class="btn btn-ghost btn-sm" style="font-size: var(--font-size-caption);">Browse B+ Requests &rarr;</span>
+                </a>
+
+                <!-- B- -->
+                <a th:href="@{/requests(bloodGroup='B_NEGATIVE')}" class="blood-tile-card" style="text-decoration: none;">
+                    <div>
+                        <div class="blood-tile-symbol">B-</div>
+                        <span class="badge blood-tile-badge" style="background-color: var(--color-surface-subtle); color: var(--color-text);">Very Rare</span>
+                    </div>
+                    <div class="blood-tile-desc">
+                        Can donate to B+, B-, AB+, AB-.<br>Can receive from <strong>B-, O-</strong>.
+                    </div>
+                    <span class="btn btn-ghost btn-sm" style="font-size: var(--font-size-caption);">Browse B- Requests &rarr;</span>
+                </a>
+
+                <!-- AB+ -->
+                <a th:href="@{/requests(bloodGroup='AB_POSITIVE')}" class="blood-tile-card" style="text-decoration: none;">
+                    <div>
+                        <div class="blood-tile-symbol">AB+</div>
+                        <span class="badge badge-teal blood-tile-badge">Universal Recipient</span>
+                    </div>
+                    <div class="blood-tile-desc">
+                        Can donate to AB+.<br>Can receive from <strong>all blood types</strong>.
+                    </div>
+                    <span class="btn btn-ghost btn-sm" style="font-size: var(--font-size-caption);">Browse AB+ Requests &rarr;</span>
+                </a>
+
+                <!-- AB- -->
+                <a th:href="@{/requests(bloodGroup='AB_NEGATIVE')}" class="blood-tile-card" style="text-decoration: none;">
+                    <div>
+                        <div class="blood-tile-symbol">AB-</div>
+                        <span class="badge blood-tile-badge" style="background-color: var(--color-surface-subtle); color: var(--color-text);">Rarest Type</span>
+                    </div>
+                    <div class="blood-tile-desc">
+                        Can donate to AB+, AB-.<br>Can receive from <strong>AB-, A-, B-, O-</strong>.
+                    </div>
+                    <span class="btn btn-ghost btn-sm" style="font-size: var(--font-size-caption);">Browse AB- Requests &rarr;</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- 5. Platform Stats Strip (Dynamic from HomeController model) -->
+        <section class="stats-grid" aria-label="Platform Live Statistics" th:if="${totalDonors != null}">
+            <div class="stat-card">
+                <div class="stat-value" th:text="${totalDonors}">0</div>
+                <div class="stat-label">Registered Voluntary Donors</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" th:text="${totalRequests}">0</div>
+                <div class="stat-label">Total Blood Inquiries</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-value-teal" th:text="${fulfilledRequests}">0</div>
+                <div class="stat-label">Requests Fulfilled</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value stat-value-blue">100%</div>
+                <div class="stat-label">Privacy Protected Contacts</div>
+            </div>
+        </section>
+
+        <!-- 6. Final Call-to-Action Section -->
+        <section class="final-cta-section" aria-labelledby="ctaHeading">
+            <h2 id="ctaHeading">Ready to Make a Lifesaving Difference?</h2>
+            <p>
+                Whether you are stepping forward to donate blood or urgently coordinating a transfusion for a loved one, LifeLink provides the trusted network you need.
+            </p>
+            <div class="final-cta-actions">
+                <span sec:authorize="isAnonymous()" style="display: inline-flex; gap: var(--space-4); flex-wrap: wrap; justify-content: center;">
+                    <a th:href="@{/register}" class="btn btn-cta-light btn-lg">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                        <span>Become a Donor Today</span>
+                    </a>
+                    <a th:href="@{/login}" class="btn btn-cta-outline btn-lg">
+                        <span>Sign In to Account</span>
+                    </a>
+                </span>
+                <span sec:authorize="isAuthenticated()" style="display: inline-flex; gap: var(--space-4); flex-wrap: wrap; justify-content: center;">
+                    <a sec:authorize="hasRole('SEEKER')" th:href="@{/requests/new}" class="btn btn-cta-light btn-lg">
+                        <span>+ Post a Blood Request</span>
+                    </a>
+                    <a sec:authorize="hasRole('DONOR')" th:href="@{/donor/dashboard}" class="btn btn-cta-light btn-lg">
+                        <span>Open Donor Dashboard</span>
+                    </a>
+                    <a th:href="@{/requests}" class="btn btn-cta-outline btn-lg">
+                        <span>View Open Requests</span>
+                    </a>
+                </span>
             </div>
         </section>
     </main>

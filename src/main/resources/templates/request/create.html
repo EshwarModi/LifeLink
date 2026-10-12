@@ -5,81 +5,200 @@
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
 
-    <main>
-        <div class="form-container" style="max-width: 680px;">
-            <div class="card">
-                <h2 style="color: var(--color-secondary); margin-bottom: 0.5rem;">Post an Urgent Blood Request</h2>
-                <p style="color: var(--color-text-muted); font-size: 0.95rem; margin-bottom: 1.5rem;">
-                    Our automated matching algorithm will immediately alert eligible donors nearby.
-                </p>
+    <main id="mainContent" class="container py-8">
+        <div style="max-width: 820px; margin: 0 auto;">
+            <!-- Page Header -->
+            <div style="margin-bottom: var(--space-6);">
+                <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2);">
+                    <div style="width: 2.75rem; height: 2.75rem; border-radius: var(--radius-md); background-color: var(--color-primary-subtle); color: var(--color-primary); display: flex; align-items: center; justify-content: center;">
+                        <svg class="icon icon-md" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                    </div>
+                    <div>
+                        <h1 style="font-size: var(--font-size-h2); margin: 0;">Post an Urgent Blood Request</h1>
+                        <p style="color: var(--color-text-muted); font-size: var(--font-size-small); margin: 0;">
+                            Submit transfusion specifications. Our matching engine alerts eligible donors nearby immediately.
+                        </p>
+                    </div>
+                </div>
+            </div>
 
-                <div th:replace="~{fragments/layout :: alerts}"></div>
+            <div th:replace="~{fragments/layout :: alerts}"></div>
 
-                <!-- Create Request Form with CSRF token -->
-                <form th:action="@{/requests}" th:object="${requestDto}" method="post">
+            <!-- Create Request Form -->
+            <form th:action="@{/requests}"
+                  th:object="${requestDto}"
+                  method="post"
+                  data-prevent-double-submit
+                  class="card"
+                  style="padding: var(--space-8) var(--space-6);">
 
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="bloodGroup">Blood Group Required *</label>
-                            <select id="bloodGroup" th:field="*{bloodGroup}" class="form-control" required>
-                                <option value="">Select Blood Group</option>
-                                <option th:each="bg : ${bloodGroups}" th:value="${bg}" th:text="${bg.label}"></option>
-                            </select>
-                            <span class="field-error" th:if="${#fields.hasErrors('bloodGroup')}" th:errors="*{bloodGroup}"></span>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label" for="unitsNeeded">Units Needed (1 - 20) *</label>
-                            <input type="number" id="unitsNeeded" th:field="*{unitsNeeded}" class="form-control"
-                                   min="1" max="20" placeholder="e.g. 2" required>
-                            <span class="field-error" th:if="${#fields.hasErrors('unitsNeeded')}" th:errors="*{unitsNeeded}"></span>
+                <!-- Group 1: Blood Requirement -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="form-section-icon">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                        </span>
+                        <div>
+                            <h2 class="form-section-title">1. Blood Requirement</h2>
+                            <p class="form-section-desc">Select the exact required ABO &amp; Rh factor group and required units.</p>
                         </div>
                     </div>
 
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label" for="urgency">Urgency Level *</label>
-                            <select id="urgency" th:field="*{urgency}" class="form-control" required>
-                                <option th:each="u : ${urgencies}" th:value="${u}" th:text="${u.label}"></option>
-                            </select>
-                            <span class="field-error" th:if="${#fields.hasErrors('urgency')}" th:errors="*{urgency}"></span>
+                    <div class="form-group">
+                        <label class="form-label" id="bloodGroupLabel">Blood Group Required *</label>
+                        <div class="blood-chip-grid" role="radiogroup" aria-labelledby="bloodGroupLabel">
+                            <div class="blood-chip-item" th:each="bg : ${bloodGroups}">
+                                <input type="radio"
+                                       th:field="*{bloodGroup}"
+                                       th:value="${bg}"
+                                       th:id="${'bg_' + bg}"
+                                       class="blood-chip-input sr-only"
+                                       required>
+                                <label th:for="${'bg_' + bg}" class="blood-chip">
+                                    <span class="blood-chip-icon">
+                                        <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                                    </span>
+                                    <span class="blood-chip-label" th:text="${bg.label}">A+</span>
+                                </label>
+                            </div>
                         </div>
+                        <div class="field-error" th:if="${#fields.hasErrors('bloodGroup')}" th:errors="*{bloodGroup}"></div>
+                    </div>
 
-                        <div class="form-group">
-                            <label class="form-label" for="requiredBy">Required By (Future Date) *</label>
-                            <input type="date" id="requiredBy" th:field="*{requiredBy}" class="form-control" required>
-                            <small style="color: var(--color-text-muted); font-size: 0.8rem;">Must be strictly after today.</small>
-                            <span class="field-error" th:if="${#fields.hasErrors('requiredBy')}" th:errors="*{requiredBy}"></span>
+                    <div class="form-group" style="margin-top: var(--space-5);">
+                        <label class="form-label" for="unitsNeeded">Units Needed (1 – 20) *</label>
+                        <div style="max-width: 240px;">
+                            <input type="number"
+                                   id="unitsNeeded"
+                                   th:field="*{unitsNeeded}"
+                                   class="form-control"
+                                   min="1"
+                                   max="20"
+                                   placeholder="e.g. 2"
+                                   required>
+                        </div>
+                        <span class="form-text">Standard whole blood or packed red blood cell units.</span>
+                        <div class="field-error" th:if="${#fields.hasErrors('unitsNeeded')}" th:errors="*{unitsNeeded}"></div>
+                    </div>
+                </div>
+
+                <!-- Group 2: Urgency & Timing -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="form-section-icon" style="background-color: var(--color-urgency-critical-bg); color: var(--color-urgency-critical);">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-clock"></use></svg>
+                        </span>
+                        <div>
+                            <h2 class="form-section-title">2. Urgency &amp; Timing</h2>
+                            <p class="form-section-desc">Classify the clinical priority level and specify the required transfusion deadline.</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" id="urgencyGroupLabel">Urgency Classification *</label>
+                        <div class="urgency-segmented" role="radiogroup" aria-labelledby="urgencyGroupLabel">
+                            <div class="urgency-option" th:each="u : ${urgencies}">
+                                <input type="radio"
+                                       th:field="*{urgency}"
+                                       th:value="${u}"
+                                       th:id="${'urgency_' + u}"
+                                       class="urgency-radio sr-only"
+                                       required>
+                                <label th:for="${'urgency_' + u}"
+                                       th:class="'urgency-tile urgency-tile-' + ${#strings.toLowerCase(u.name())}">
+                                    <div class="urgency-tile-header">
+                                        <span class="urgency-tile-icon">
+                                            <svg th:if="${u.name() == 'CRITICAL' or u.name() == 'HIGH'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-alert"></use></svg>
+                                            <svg th:if="${u.name() == 'MEDIUM'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg>
+                                            <svg th:if="${u.name() == 'LOW'}" class="icon icon-xs" aria-hidden="true"><use href="#icon-check"></use></svg>
+                                        </span>
+                                        <span class="urgency-tile-name" th:text="${u.label}">Urgency</span>
+                                    </div>
+                                    <div class="urgency-tile-desc"
+                                         th:text="${u.name() == 'CRITICAL' ? 'Immediate transfusion required' : (u.name() == 'HIGH' ? 'Needed within 24 hours' : (u.name() == 'MEDIUM' ? 'Needed within 48-72 hours' : 'Elective / planned procedure'))}">
+                                        Timeline
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="field-error" th:if="${#fields.hasErrors('urgency')}" th:errors="*{urgency}"></div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: var(--space-5);">
+                        <label class="form-label" for="requiredBy">Required By (Future Date) *</label>
+                        <div style="max-width: 280px;">
+                            <input type="date"
+                                   id="requiredBy"
+                                   th:field="*{requiredBy}"
+                                   class="form-control"
+                                   data-min-tomorrow
+                                   required>
+                        </div>
+                        <span class="form-text">Must be strictly after today.</span>
+                        <div class="field-error" th:if="${#fields.hasErrors('requiredBy')}" th:errors="*{requiredBy}"></div>
+                    </div>
+                </div>
+
+                <!-- Group 3: Hospital & Clinical Details -->
+                <div class="form-section">
+                    <div class="form-section-header">
+                        <span class="form-section-icon" style="background-color: var(--color-secondary-subtle); color: var(--color-secondary);">
+                            <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-hospital"></use></svg>
+                        </span>
+                        <div>
+                            <h2 class="form-section-title">3. Hospital &amp; Facility Details</h2>
+                            <p class="form-section-desc">Medical facility where donor will report for blood donation or transfusion.</p>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="hospitalName">Hospital / Medical Center Name *</label>
-                        <input type="text" id="hospitalName" th:field="*{hospitalName}" class="form-control"
-                               placeholder="e.g. Apollo Memorial Hospital" required>
-                        <span class="field-error" th:if="${#fields.hasErrors('hospitalName')}" th:errors="*{hospitalName}"></span>
+                        <input type="text"
+                               id="hospitalName"
+                               th:field="*{hospitalName}"
+                               class="form-control"
+                               placeholder="e.g. Apollo Memorial Hospital"
+                               maxlength="150"
+                               required>
+                        <div class="field-error" th:if="${#fields.hasErrors('hospitalName')}" th:errors="*{hospitalName}"></div>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label" for="hospitalAddress">Hospital Street Address *</label>
-                        <input type="text" id="hospitalAddress" th:field="*{hospitalAddress}" class="form-control"
-                               placeholder="e.g. Ward 4B, 123 Health Ave, Mumbai" required>
-                        <span class="field-error" th:if="${#fields.hasErrors('hospitalAddress')}" th:errors="*{hospitalAddress}"></span>
+                        <label class="form-label" for="hospitalAddress">Hospital Street Address &amp; Ward *</label>
+                        <input type="text"
+                               id="hospitalAddress"
+                               th:field="*{hospitalAddress}"
+                               class="form-control"
+                               placeholder="e.g. Intensive Care Ward 4B, 123 Health Ave"
+                               maxlength="255"
+                               required>
+                        <div class="field-error" th:if="${#fields.hasErrors('hospitalAddress')}" th:errors="*{hospitalAddress}"></div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="reason">Clinical Reason / Patient Context (optional)</label>
-                        <textarea id="reason" th:field="*{reason}" class="form-control" rows="3"
-                                  placeholder="e.g. Scheduled cardiac surgery or urgent trauma replenishment..."></textarea>
-                        <span class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></span>
+                        <div class="char-counter-wrap">
+                            <textarea id="reason"
+                                      th:field="*{reason}"
+                                      class="form-control"
+                                      rows="3"
+                                      maxlength="1000"
+                                      placeholder="e.g. Scheduled emergency surgery, severe anemia transfusion, or trauma recovery..."></textarea>
+                            <span id="reasonCounter" class="char-counter">0 / 1000 characters</span>
+                        </div>
+                        <div class="field-error" th:if="${#fields.hasErrors('reason')}" th:errors="*{reason}"></div>
                     </div>
+                </div>
 
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem;">
-                        <a th:href="@{/seeker/dashboard}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-primary btn-lg">Publish Request & Match Donors</button>
-                    </div>
-                </form>
-            </div>
+                <!-- Form Action Buttons -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--color-border-subtle); flex-wrap: wrap; gap: var(--space-3);">
+                    <a th:href="@{/seeker/dashboard}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary btn-lg" data-loading-text="Publishing Request...">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-pulse"></use></svg>
+                        <span>Publish Request &amp; Alert Matching Donors</span>
+                    </button>
+                </div>
+            </form>
         </div>
     </main>
 
