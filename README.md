@@ -4,6 +4,18 @@ A 100% Java Full-Stack blood donation matching platform built with **Java 21**, 
 
 ---
 
+## Screenshots
+
+| Home Page | Registration Flow |
+|:---:|:---:|
+| ![Home Page](docs/screenshots/home.png) | ![Register Page](docs/screenshots/register.png) |
+| **Seeker Dashboard** | **Donor Hub** |
+| ![Seeker Dashboard](docs/screenshots/seeker-dashboard.png) | ![Donor Dashboard](docs/screenshots/donor-dashboard.png) |
+| **Admin Analytics & Telemetry** | **Mobile Responsive View (375px)** |
+| ![Admin Dashboard](docs/screenshots/admin-dashboard.png) | ![Mobile View](docs/screenshots/mobile-view.png) |
+
+---
+
 ## 1. Architecture Overview
 
 LifeLink follows a strict **Package-by-Layer** pattern. All form submissions are bound through validated Data Transfer Objects (DTOs), never directly to JPA entities. Controllers stay thin, while the domain business logic resides entirely in the service layer.
