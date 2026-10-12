@@ -3,12 +3,15 @@
 <head th:fragment="head(title)">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="LifeLink connects voluntary blood donors with patients and hospitals in urgent clinical need through rapid, privacy-first automated matching.">
+    <!-- Inline SVG Favicon (Blood Drop Brand Emblem) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23B3122B'%3E%3Cpath d='M12 2.5C11.5 2.5 11 2.8 10.7 3.2C8.3 6.6 5 11.1 5 14.8C5 18.7 8.1 21.8 12 21.8C15.9 21.8 19 18.7 19 14.8C19 11.1 15.7 6.6 13.3 3.2C13 2.8 12.5 2.5 12 2.5Z'/%3E%3C/svg%3E">
     <!-- CSRF security tokens for form and fetch/AJAX validation -->
     <meta name="_csrf" th:content="${_csrf != null ? _csrf.token : ''}">
     <meta name="_csrf_header" th:content="${_csrf != null ? _csrf.headerName : ''}">
     <title th:text="${title} ?: 'LifeLink — Real-Time Blood Donation Network'">LifeLink</title>
 
-    <!-- Google Fonts: Sora (headings) & Inter (body) with system fallbacks -->
+    <!-- Google Fonts: Sora (headings) & Inter (body) with font-display: swap -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">

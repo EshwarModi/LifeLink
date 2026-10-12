@@ -1,24 +1,61 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('LifeLink — Action No Longer Available (409)')}"></head>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Action Not Available (409) — LifeLink')}"></head>
 <body>
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
 
     <main id="mainContent">
         <div th:replace="~{fragments/layout :: alerts}"></div>
-        <div class="card" style="max-width: 580px; margin: var(--space-8) auto; text-align: center; padding: var(--space-10) var(--space-6);">
-            <div class="empty-state-icon" style="background-color: var(--color-urgency-medium-bg); color: var(--color-urgency-medium); margin-bottom: var(--space-4);">
-                <svg class="icon icon-xl" aria-hidden="true"><use href="#icon-clock"></use></svg>
-            </div>
-            <h1 style="font-size: 3.5rem; color: var(--color-urgency-medium); margin-bottom: var(--space-2);" th:text="${status} ?: '409'">409</h1>
-            <h2 style="margin-bottom: var(--space-3);" th:text="${error} ?: 'Action No Longer Available'">Action No Longer Available</h2>
-            <p style="color: var(--color-text-muted); margin-bottom: var(--space-6);" th:text="${message} ?: 'This request or match has already changed state and cannot be updated.'">
-                This request or match has already changed state and cannot be updated.
-            </p>
-            <div style="display: flex; justify-content: center; gap: var(--space-3);">
-                <a th:href="@{/dashboard}" class="btn btn-primary">Return to Dashboard</a>
-                <a th:href="@{/requests}" class="btn btn-secondary">Browse Requests</a>
+
+        <div class="error-page-container">
+            <div class="error-card" role="alert">
+                <!-- Friendly SVG Illustration: State Transition Completed -->
+                <div class="error-illustration" aria-hidden="true">
+                    <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="80" cy="80" r="72" fill="#FFFBEB" />
+                        <circle cx="80" cy="80" r="58" fill="#FEF3C7" fill-opacity="0.6" />
+                        <!-- Clock Dial -->
+                        <circle cx="80" cy="80" r="34" fill="#FFFFFF" stroke="#D97706" stroke-width="3" />
+                        <!-- Clock Hands pointing to past -->
+                        <path d="M80 58V80L94 90" stroke="#B45309" stroke-width="3.5" stroke-linecap="round" />
+                        <circle cx="80" cy="80" r="3" fill="#B45309" />
+                        <!-- Refresh / Changed State Badge -->
+                        <circle cx="106" cy="54" r="14" fill="#0D9488" stroke="#FFFFFF" stroke-width="2.5" />
+                        <path d="M102 54L105 57L111 51" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+
+                <div class="error-code-badge error-code-409">
+                    <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-clock"></use></svg>
+                    <span>HTTP 409 &bull; State Conflict</span>
+                </div>
+
+                <h1 class="error-title">Action no longer available.</h1>
+
+                <p class="error-description" th:text="${message} ?: 'This blood request or donor match has already changed state and can no longer be updated.'">
+                    This blood request or donor match has already changed state and can no longer be updated.
+                </p>
+
+                <div class="error-actions">
+                    <!-- When authenticated: Go to dashboard as primary, Go home as secondary -->
+                    <a th:href="@{/dashboard}" class="btn btn-primary" sec:authorize="isAuthenticated()">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-user"></use></svg>
+                        Go to dashboard
+                    </a>
+                    <a th:href="@{/}" class="btn btn-secondary" sec:authorize="isAuthenticated()">
+                        Go home
+                    </a>
+
+                    <!-- When anonymous: Go home as primary, Browse requests as secondary -->
+                    <a th:href="@{/}" class="btn btn-primary" sec:authorize="isAnonymous()">
+                        Go home
+                    </a>
+                    <a th:href="@{/requests}" class="btn btn-secondary" sec:authorize="isAnonymous()">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                        Browse requests
+                    </a>
+                </div>
             </div>
         </div>
     </main>

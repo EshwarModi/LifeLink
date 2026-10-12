@@ -1,24 +1,64 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('LifeLink — Access Denied (403)')}"></head>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Access Denied (403) — LifeLink')}"></head>
 <body>
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
 
     <main id="mainContent">
         <div th:replace="~{fragments/layout :: alerts}"></div>
-        <div class="card" style="max-width: 580px; margin: var(--space-8) auto; text-align: center; padding: var(--space-10) var(--space-6);">
-            <div class="empty-state-icon" style="background-color: var(--color-urgency-medium-bg); color: var(--color-urgency-medium); margin-bottom: var(--space-4);">
-                <svg class="icon icon-xl" aria-hidden="true"><use href="#icon-alert"></use></svg>
-            </div>
-            <h1 style="font-size: 3.5rem; color: var(--color-urgency-medium); margin-bottom: var(--space-2);">403</h1>
-            <h2 style="margin-bottom: var(--space-3);">Access Forbidden</h2>
-            <p style="color: var(--color-text-muted); margin-bottom: var(--space-6);" th:text="${message} ?: 'You do not have permission to view or modify this resource.'">
-                You do not have permission to view or modify this resource.
-            </p>
-            <div style="display: flex; justify-content: center; gap: var(--space-3);">
-                <a th:href="@{/dashboard}" class="btn btn-primary">Go to My Dashboard</a>
-                <a th:href="@{/}" class="btn btn-secondary">Platform Home</a>
+
+        <div class="error-page-container">
+            <div class="error-card" role="alert">
+                <!-- Friendly SVG Illustration: Shield with Lock -->
+                <div class="error-illustration" aria-hidden="true">
+                    <svg viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="80" cy="80" r="72" fill="#FEF3C7" />
+                        <circle cx="80" cy="80" r="58" fill="#FDE68A" fill-opacity="0.5" />
+                        <!-- Shield Shape -->
+                        <path d="M80 32C94 36 112 40 114 52C114 84 98 108 80 120C62 108 46 84 46 52C48 40 66 36 80 32Z"
+                              fill="#FFFBEB" stroke="#D97706" stroke-width="3" stroke-linejoin="round" />
+                        <!-- Padlock Body -->
+                        <rect x="66" y="70" width="28" height="24" rx="4" fill="#B45309" />
+                        <!-- Padlock Shackle -->
+                        <path d="M72 70V60C72 55.58 75.58 52 80 52C84.42 52 88 55.58 88 60V70"
+                              stroke="#B45309" stroke-width="3.5" stroke-linecap="round" fill="none" />
+                        <!-- Keyhole -->
+                        <circle cx="80" cy="79" r="2.5" fill="#FFFFFF" />
+                        <path d="M79 81.5H81L81.5 87H78.5L79 81.5Z" fill="#FFFFFF" />
+                    </svg>
+                </div>
+
+                <div class="error-code-badge error-code-403">
+                    <svg class="icon icon-xs" aria-hidden="true"><use href="#icon-lock"></use></svg>
+                    <span>HTTP 403 &bull; Restricted</span>
+                </div>
+
+                <h1 class="error-title">You don't have access to this page.</h1>
+
+                <p class="error-description" th:text="${message} ?: 'This area requires different account permissions or elevated credentials to view.'">
+                    This area requires different account permissions or elevated credentials to view.
+                </p>
+
+                <div class="error-actions">
+                    <!-- When authenticated: Go to dashboard as primary, Go home as secondary -->
+                    <a th:href="@{/dashboard}" class="btn btn-primary" sec:authorize="isAuthenticated()">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-user"></use></svg>
+                        Go to dashboard
+                    </a>
+                    <a th:href="@{/}" class="btn btn-secondary" sec:authorize="isAuthenticated()">
+                        Go home
+                    </a>
+
+                    <!-- When anonymous: Go home as primary, Sign in as secondary -->
+                    <a th:href="@{/}" class="btn btn-primary" sec:authorize="isAnonymous()">
+                        Go home
+                    </a>
+                    <a th:href="@{/login}" class="btn btn-secondary" sec:authorize="isAnonymous()">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-user"></use></svg>
+                        Sign in
+                    </a>
+                </div>
             </div>
         </div>
     </main>

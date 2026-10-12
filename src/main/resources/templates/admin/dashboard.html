@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('Admin Dashboard — LifeLink')}"></head>
+<head th:replace="~{fragments/layout :: head('Admin Overview — LifeLink')}"></head>
 <body>
 
     <header th:replace="~{fragments/layout :: navbar}"></header>
@@ -8,30 +8,35 @@
     <main class="main-content" id="mainContent">
         <div th:replace="~{fragments/layout :: alerts}"></div>
 
-        <!-- Admin Overview Banner -->
+        <!-- Admin Overview Header Banner -->
         <div class="dashboard-header-card">
             <div class="dashboard-header-flex">
                 <div>
-                    <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
-                        <span class="badge badge-teal">
+                    <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); flex-wrap: wrap;">
+                        <span class="badge badge-primary">
                             <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-shield-check"></use></svg>
+                            Admin
+                        </span>
+                        <span class="badge" style="background-color: var(--color-surface-subtle); border-color: var(--color-border); color: var(--color-text-secondary);">
+                            <svg class="icon icon-sm text-muted" aria-hidden="true"><use href="#icon-lock"></use></svg>
                             Read-Only System View
                         </span>
-                        <span class="badge" style="background-color: var(--color-surface-subtle); border-color: var(--color-border); color: var(--color-text-muted);">
-                            Role: Platform Administrator
-                        </span>
                     </div>
-                    <h1>Administrator Analytics Dashboard</h1>
+                    <h1>Platform Overview &amp; System Telemetry</h1>
                     <div class="dashboard-meta">
                         <span>
                             <svg class="icon icon-sm" aria-hidden="true" style="vertical-align: text-bottom;"><use href="#icon-user"></use></svg>
-                            Logged in as: <strong th:text="${user.fullName}">Administrator</strong> (<span th:text="${user.username}">admin</span>)
+                            Administrator: <strong th:text="${user.fullName}">Administrator</strong> (<span th:text="${user.username}">admin</span>)
                         </span>
                     </div>
                 </div>
-                <div>
-                    <form th:action="@{/logout}" method="post" style="display:inline;">
-                        <button type="submit" class="btn btn-secondary btn-sm">
+                <div style="display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;">
+                    <a th:href="@{/}" class="btn btn-secondary btn-sm" aria-label="Return to public site">
+                        <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+                        Back to Site
+                    </a>
+                    <form th:action="@{/logout}" method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-ghost btn-sm" aria-label="Sign out of administration console">
                             <svg class="icon icon-sm" aria-hidden="true"><use href="#icon-arrow-right"></use></svg>
                             Sign Out
                         </button>
@@ -40,114 +45,412 @@
             </div>
         </div>
 
-        <!-- 1. User Accounts Breakdown -->
-        <section class="card" aria-labelledby="userBreakdownHeading">
-            <div class="card-header">
-                <h2 id="userBreakdownHeading" style="font-size: var(--font-size-h3); margin: 0;">
-                    User Accounts Breakdown (Total: <span th:text="${totalUsers}">0</span>)
-                </h2>
-                <span class="text-sm text-muted">Platform account distribution</span>
-            </div>
-            <div class="stats-grid" style="margin-bottom: 0;">
+        <!-- 1. Top Row of High-Level Stat Cards -->
+        <section aria-labelledby="platformSummaryHeading" style="margin-bottom: var(--space-6);">
+            <h2 id="platformSummaryHeading" class="sr-only">Platform High-Level Metrics</h2>
+            <div class="admin-summary-grid">
+                <!-- User Population -->
                 <div class="stat-card">
-                    <div class="stat-value" th:text="${donorCount}">0</div>
+                    <div class="stat-value" th:text="${totalUsers}">0</div>
                     <div class="stat-label">
-                        <svg class="icon icon-sm text-muted" aria-hidden="true" style="vertical-align: text-bottom;"><use href="#icon-drop"></use></svg>
-                        Registered Donors
+                        <svg class="icon icon-sm text-muted" aria-hidden="true"><use href="#icon-users"></use></svg>
+                        Total Registered Users
+                    </div>
+                    <div class="stat-submetrics" aria-label="User role breakdown">
+                        <span class="stat-submetric-pill">
+                            <span class="chart-legend-dot dot-donor" aria-hidden="true"></span>
+                            <span><strong th:text="${donorCount}">0</strong> Donors</span>
+                        </span>
+                        <span class="stat-submetric-pill">
+                            <span class="chart-legend-dot dot-seeker" aria-hidden="true"></span>
+                            <span><strong th:text="${seekerCount}">0</strong> Seekers</span>
+                        </span>
+                        <span class="stat-submetric-pill">
+                            <span class="chart-legend-dot dot-admin" aria-hidden="true"></span>
+                            <span><strong th:text="${adminCount}">0</strong> Admins</span>
+                        </span>
                     </div>
                 </div>
+
+                <!-- Blood Requests Pipeline -->
                 <div class="stat-card">
-                    <div class="stat-value" th:text="${seekerCount}">0</div>
+                    <div class="stat-value stat-value-blue" th:text="${totalRequests}">0</div>
                     <div class="stat-label">
-                        <svg class="icon icon-sm text-muted" aria-hidden="true" style="vertical-align: text-bottom;"><use href="#icon-user"></use></svg>
-                        Patients / Seekers
+                        <svg class="icon icon-sm text-muted" aria-hidden="true"><use href="#icon-drop"></use></svg>
+                        Total Blood Requests
+                    </div>
+                    <div class="stat-submetrics" aria-label="Request status breakdown">
+                        <span class="stat-submetric-pill">
+                            <span class="chart-legend-dot dot-open" aria-hidden="true"></span>
+                            <span><strong th:text="${openRequests}">0</strong> Open</span>
+                        </span>
+                        <span class="stat-submetric-pill">
+                            <span class="chart-legend-dot dot-fulfilled" aria-hidden="true"></span>
+                            <span><strong th:text="${fulfilledRequests}">0</strong> Fulfilled</span>
+                        </span>
+                        <span class="stat-submetric-pill">
+                            <span class="chart-legend-dot dot-cancelled" aria-hidden="true"></span>
+                            <span><strong th:text="${cancelledRequests + expiredRequests}">0</strong> Closed</span>
+                        </span>
                     </div>
                 </div>
+
+                <!-- Match Outcomes -->
                 <div class="stat-card">
-                    <div class="stat-value" th:text="${adminCount}">0</div>
+                    <div class="stat-value stat-value-teal" th:text="${totalMatches}">0</div>
                     <div class="stat-label">
-                        <svg class="icon icon-sm text-muted" aria-hidden="true" style="vertical-align: text-bottom;"><use href="#icon-shield-check"></use></svg>
-                        System Admins
+                        <svg class="icon icon-sm text-muted" aria-hidden="true"><use href="#icon-check"></use></svg>
+                        System Match Pairings
+                    </div>
+                    <div class="stat-submetrics" aria-label="Match outcome breakdown">
+                        <span class="stat-submetric-pill">
+                            <span class="chart-legend-dot dot-accepted" aria-hidden="true"></span>
+                            <span><strong th:text="${acceptedMatches}">0</strong> Accepted</span>
+                        </span>
+                        <span class="stat-submetric-pill">
+                            <span class="chart-legend-dot dot-pending" aria-hidden="true"></span>
+                            <span><strong th:text="${pendingMatches}">0</strong> Pending</span>
+                        </span>
+                        <span class="stat-submetric-pill">
+                            <span class="chart-legend-dot dot-declined" aria-hidden="true"></span>
+                            <span><strong th:text="${declinedMatches + expiredMatches}">0</strong> Closed</span>
+                        </span>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- 2. Request Counts by Status -->
-        <section class="card" aria-labelledby="requestBreakdownHeading">
-            <div class="card-header">
-                <h2 id="requestBreakdownHeading" style="font-size: var(--font-size-h3); margin: 0;">
-                    Blood Requests Breakdown (Total: <span th:text="${totalRequests}">0</span>)
-                </h2>
-                <span class="text-sm text-muted">Lifecycle status across all patient requests</span>
+        <!-- 2. CSS-Only Bar Charts: Status Distributions & Proportions -->
+        <section aria-labelledby="statusDistributionsHeading" style="margin-bottom: var(--space-8);">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-4);">
+                <div>
+                    <h2 id="statusDistributionsHeading" style="font-size: var(--font-size-h3); margin: 0;">
+                        Status Distributions &amp; Proportions
+                    </h2>
+                    <p class="text-sm text-muted" style="margin-top: var(--space-1); margin-bottom: 0;">
+                        Real-time distribution ratios across requests, match outcomes, and user accounts (pure CSS).
+                    </p>
+                </div>
             </div>
-            <div class="stats-grid" style="margin-bottom: 0;">
-                <div class="stat-card">
-                    <div class="stat-value stat-value-blue" th:text="${openRequests}">0</div>
-                    <div class="stat-label">Open Active</div>
+
+            <div class="chart-grid">
+                <!-- Chart 1: Blood Requests Status Distribution -->
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3 class="chart-card-title">Blood Requests</h3>
+                            <div class="chart-card-subtitle">Lifecycle state proportion</div>
+                        </div>
+                        <span class="badge" th:text="${totalRequests} + ' requests'">0 requests</span>
+                    </div>
+
+                    <!-- Multi-segment overview bar -->
+                    <div class="chart-stacked-bar" role="meter" aria-label="Requests status distribution bar">
+                        <div class="chart-segment segment-open"
+                             th:style="'width: ' + (${totalRequests > 0 ? T(java.lang.Math).round(openRequests * 100.0 / totalRequests) : 0}) + '%;'"
+                             th:title="'Open: ' + ${openRequests}"></div>
+                        <div class="chart-segment segment-fulfilled"
+                             th:style="'width: ' + (${totalRequests > 0 ? T(java.lang.Math).round(fulfilledRequests * 100.0 / totalRequests) : 0}) + '%;'"
+                             th:title="'Fulfilled: ' + ${fulfilledRequests}"></div>
+                        <div class="chart-segment segment-cancelled"
+                             th:style="'width: ' + (${totalRequests > 0 ? T(java.lang.Math).round(cancelledRequests * 100.0 / totalRequests) : 0}) + '%;'"
+                             th:title="'Cancelled: ' + ${cancelledRequests}"></div>
+                        <div class="chart-segment segment-expired"
+                             th:style="'width: ' + (${totalRequests > 0 ? T(java.lang.Math).round(expiredRequests * 100.0 / totalRequests) : 0}) + '%;'"
+                             th:title="'Expired: ' + ${expiredRequests}"></div>
+                    </div>
+
+                    <!-- Individual category breakdown rows -->
+                    <div class="chart-bar-list">
+                        <!-- Open -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-open" aria-hidden="true"></span>
+                                    Open (Active)
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${openRequests}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalRequests > 0 ? T(java.lang.Math).round(openRequests * 100.0 / totalRequests) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-open"
+                                     th:style="'width: ' + (${totalRequests > 0 ? T(java.lang.Math).round(openRequests * 100.0 / totalRequests) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Fulfilled -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-fulfilled" aria-hidden="true"></span>
+                                    Fulfilled
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${fulfilledRequests}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalRequests > 0 ? T(java.lang.Math).round(fulfilledRequests * 100.0 / totalRequests) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-fulfilled"
+                                     th:style="'width: ' + (${totalRequests > 0 ? T(java.lang.Math).round(fulfilledRequests * 100.0 / totalRequests) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Cancelled -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-cancelled" aria-hidden="true"></span>
+                                    Cancelled
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${cancelledRequests}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalRequests > 0 ? T(java.lang.Math).round(cancelledRequests * 100.0 / totalRequests) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-cancelled"
+                                     th:style="'width: ' + (${totalRequests > 0 ? T(java.lang.Math).round(cancelledRequests * 100.0 / totalRequests) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Expired -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-expired" aria-hidden="true"></span>
+                                    Expired (Overdue)
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${expiredRequests}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalRequests > 0 ? T(java.lang.Math).round(expiredRequests * 100.0 / totalRequests) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-expired"
+                                     th:style="'width: ' + (${totalRequests > 0 ? T(java.lang.Math).round(expiredRequests * 100.0 / totalRequests) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value stat-value-teal" th:text="${fulfilledRequests}">0</div>
-                    <div class="stat-label">Fulfilled</div>
+
+                <!-- Chart 2: Match Outcomes Distribution -->
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3 class="chart-card-title">Match Outcomes</h3>
+                            <div class="chart-card-subtitle">Pairing outcome proportion</div>
+                        </div>
+                        <span class="badge" th:text="${totalMatches} + ' matches'">0 matches</span>
+                    </div>
+
+                    <!-- Multi-segment overview bar -->
+                    <div class="chart-stacked-bar" role="meter" aria-label="Matches outcome distribution bar">
+                        <div class="chart-segment segment-accepted"
+                             th:style="'width: ' + (${totalMatches > 0 ? T(java.lang.Math).round(acceptedMatches * 100.0 / totalMatches) : 0}) + '%;'"
+                             th:title="'Accepted: ' + ${acceptedMatches}"></div>
+                        <div class="chart-segment segment-pending"
+                             th:style="'width: ' + (${totalMatches > 0 ? T(java.lang.Math).round(pendingMatches * 100.0 / totalMatches) : 0}) + '%;'"
+                             th:title="'Pending: ' + ${pendingMatches}"></div>
+                        <div class="chart-segment segment-declined"
+                             th:style="'width: ' + (${totalMatches > 0 ? T(java.lang.Math).round(declinedMatches * 100.0 / totalMatches) : 0}) + '%;'"
+                             th:title="'Declined: ' + ${declinedMatches}"></div>
+                        <div class="chart-segment segment-expired"
+                             th:style="'width: ' + (${totalMatches > 0 ? T(java.lang.Math).round(expiredMatches * 100.0 / totalMatches) : 0}) + '%;'"
+                             th:title="'Expired: ' + ${expiredMatches}"></div>
+                    </div>
+
+                    <!-- Individual category breakdown rows -->
+                    <div class="chart-bar-list">
+                        <!-- Accepted -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-accepted" aria-hidden="true"></span>
+                                    Accepted (Contact Shared)
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${acceptedMatches}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalMatches > 0 ? T(java.lang.Math).round(acceptedMatches * 100.0 / totalMatches) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-accepted"
+                                     th:style="'width: ' + (${totalMatches > 0 ? T(java.lang.Math).round(acceptedMatches * 100.0 / totalMatches) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Pending -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-pending" aria-hidden="true"></span>
+                                    Pending Response
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${pendingMatches}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalMatches > 0 ? T(java.lang.Math).round(pendingMatches * 100.0 / totalMatches) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-pending"
+                                     th:style="'width: ' + (${totalMatches > 0 ? T(java.lang.Math).round(pendingMatches * 100.0 / totalMatches) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Declined -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-declined" aria-hidden="true"></span>
+                                    Declined
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${declinedMatches}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalMatches > 0 ? T(java.lang.Math).round(declinedMatches * 100.0 / totalMatches) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-declined"
+                                     th:style="'width: ' + (${totalMatches > 0 ? T(java.lang.Math).round(declinedMatches * 100.0 / totalMatches) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Expired -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-expired" aria-hidden="true"></span>
+                                    Expired
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${expiredMatches}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalMatches > 0 ? T(java.lang.Math).round(expiredMatches * 100.0 / totalMatches) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-expired"
+                                     th:style="'width: ' + (${totalMatches > 0 ? T(java.lang.Math).round(expiredMatches * 100.0 / totalMatches) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value stat-value-gray" th:text="${cancelledRequests}">0</div>
-                    <div class="stat-label">Cancelled</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value stat-value-crimson" th:text="${expiredRequests}">0</div>
-                    <div class="stat-label">Expired (Overdue)</div>
+
+                <!-- Chart 3: User Role Distribution -->
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3 class="chart-card-title">User Accounts</h3>
+                            <div class="chart-card-subtitle">User role proportion</div>
+                        </div>
+                        <span class="badge" th:text="${totalUsers} + ' accounts'">0 accounts</span>
+                    </div>
+
+                    <!-- Multi-segment overview bar -->
+                    <div class="chart-stacked-bar" role="meter" aria-label="User accounts distribution bar">
+                        <div class="chart-segment segment-donor"
+                             th:style="'width: ' + (${totalUsers > 0 ? T(java.lang.Math).round(donorCount * 100.0 / totalUsers) : 0}) + '%;'"
+                             th:title="'Donors: ' + ${donorCount}"></div>
+                        <div class="chart-segment segment-seeker"
+                             th:style="'width: ' + (${totalUsers > 0 ? T(java.lang.Math).round(seekerCount * 100.0 / totalUsers) : 0}) + '%;'"
+                             th:title="'Seekers: ' + ${seekerCount}"></div>
+                        <div class="chart-segment segment-admin"
+                             th:style="'width: ' + (${totalUsers > 0 ? T(java.lang.Math).round(adminCount * 100.0 / totalUsers) : 0}) + '%;'"
+                             th:title="'Admins: ' + ${adminCount}"></div>
+                    </div>
+
+                    <!-- Individual category breakdown rows -->
+                    <div class="chart-bar-list">
+                        <!-- Donors -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-donor" aria-hidden="true"></span>
+                                    Registered Donors
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${donorCount}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalUsers > 0 ? T(java.lang.Math).round(donorCount * 100.0 / totalUsers) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-donor"
+                                     th:style="'width: ' + (${totalUsers > 0 ? T(java.lang.Math).round(donorCount * 100.0 / totalUsers) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Seekers -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-seeker" aria-hidden="true"></span>
+                                    Patients / Seekers
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${seekerCount}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalUsers > 0 ? T(java.lang.Math).round(seekerCount * 100.0 / totalUsers) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-seeker"
+                                     th:style="'width: ' + (${totalUsers > 0 ? T(java.lang.Math).round(seekerCount * 100.0 / totalUsers) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+
+                        <!-- Admins -->
+                        <div class="chart-bar-row">
+                            <div class="chart-bar-info">
+                                <span class="chart-bar-label">
+                                    <span class="chart-legend-dot dot-admin" aria-hidden="true"></span>
+                                    System Admins
+                                </span>
+                                <span class="chart-bar-values">
+                                    <strong th:text="${adminCount}">0</strong>
+                                    <span class="text-muted" th:text="'(' + (${totalUsers > 0 ? T(java.lang.Math).round(adminCount * 100.0 / totalUsers) : 0}) + '%)'"></span>
+                                </span>
+                            </div>
+                            <div class="chart-bar-track">
+                                <div class="chart-bar-fill fill-admin"
+                                     th:style="'width: ' + (${totalUsers > 0 ? T(java.lang.Math).round(adminCount * 100.0 / totalUsers) : 0}) + '%;'"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- 3. Match Counts by Status -->
-        <section class="card" aria-labelledby="matchBreakdownHeading">
-            <div class="card-header">
-                <h2 id="matchBreakdownHeading" style="font-size: var(--font-size-h3); margin: 0;">
-                    Matches Breakdown (Total: <span th:text="${totalMatches}">0</span>)
-                </h2>
-                <span class="text-sm text-muted">Automated algorithmic pairings and donor outcomes</span>
-            </div>
-            <div class="stats-grid" style="margin-bottom: 0;">
-                <div class="stat-card">
-                    <div class="stat-value stat-value-amber" th:text="${pendingMatches}">0</div>
-                    <div class="stat-label">Pending Response</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value stat-value-teal" th:text="${acceptedMatches}">0</div>
-                    <div class="stat-label">Accepted (Contact Shared)</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value stat-value-gray" th:text="${declinedMatches}">0</div>
-                    <div class="stat-label">Declined</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value stat-value-crimson" th:text="${expiredMatches}">0</div>
-                    <div class="stat-label">Expired</div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 4. 10 Most Recent Blood Requests -->
+        <!-- 3. Recent Requests Table (Read-Only, Horizontally Scrollable, Zebra Striped) -->
         <section class="card" aria-labelledby="recentRequestsHeading">
-            <div class="card-header">
-                <h2 id="recentRequestsHeading" style="font-size: var(--font-size-h3); margin: 0;">
-                    10 Most Recent Blood Requests
-                </h2>
-                <span class="text-sm text-muted">Latest activity log</span>
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-2);">
+                <div>
+                    <h2 id="recentRequestsHeading" style="font-size: var(--font-size-h3); margin: 0;">
+                        Recent Blood Requests
+                    </h2>
+                    <span class="text-sm text-muted">Latest 10 patient requests submitted to the system</span>
+                </div>
+                <span class="badge" style="background-color: var(--color-surface-subtle); border-color: var(--color-border); color: var(--color-text-secondary);">
+                    Audit View (Read-Only)
+                </span>
             </div>
 
+            <!-- Empty State -->
             <div th:if="${recentRequests == null or #lists.isEmpty(recentRequests)}" class="empty-state">
                 <div class="empty-state-icon">
                     <svg class="icon icon-lg" aria-hidden="true"><use href="#icon-file-text"></use></svg>
                 </div>
-                <h3>No Requests in System</h3>
-                <p>When requests are created, the most recent 10 will be listed here.</p>
+                <h3>No Requests Recorded</h3>
+                <p>When patient blood requests are posted, the 10 most recent entries will appear here.</p>
             </div>
 
-            <div th:if="${recentRequests != null and not #lists.isEmpty(recentRequests)}" class="table-responsive">
-                <table class="table" aria-label="Recent Blood Requests">
+            <!-- Horizontally Scrollable Responsive Table Container with Zebra Striping -->
+            <div th:if="${recentRequests != null and not #lists.isEmpty(recentRequests)}"
+                 class="table-responsive"
+                 tabindex="0"
+                 role="region"
+                 aria-label="Recent blood requests audit table">
+                <table class="table table-striped" aria-label="Recent Blood Requests">
                     <thead>
                         <tr>
                             <th scope="col">ID</th>
