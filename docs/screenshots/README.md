@@ -1,6 +1,6 @@
 # LifeLink Screenshots Directory
 
-Place your captured application screenshots here matching the file names referenced in the root `README.md`:
+
 
 1. `home.png` — Landing page view (`GET /`)
 2. `register.png` — Two-step registration page (`GET /register`)
